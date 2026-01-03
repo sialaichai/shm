@@ -6,6 +6,9 @@ export class AudioManager {
         camera.add(this.listener);
         this.audioLoader = new THREE.AudioLoader();
         
+        // SAFETY LOCK: This determines if music is legally allowed to play
+        this.canPlayBGM = false; 
+
         this.sounds = {
             bgm: new THREE.Audio(this.listener),
             success: new THREE.Audio(this.listener),
@@ -18,21 +21,24 @@ export class AudioManager {
         this.audioLoader.load('./assets/bgm.mp3', (buffer) => {
             this.sounds.bgm.setBuffer(buffer);
             this.sounds.bgm.setLoop(true);
-            this.sounds.bgm.setVolume(0.3); 
+            this.sounds.bgm.setVolume(0.3);
+            
+            // If we tried to play before it loaded, play now (only if allowed!)
+            if (this.canPlayBGM && !this.sounds.bgm.isPlaying) {
+                 this.sounds.bgm.play();
+            }
         });
 
         // Load Success
         this.audioLoader.load('./assets/success.mp3', (buffer) => {
             this.sounds.success.setBuffer(buffer);
             this.sounds.success.setVolume(0.6);
-            this.sounds.success.setLoop(false);
         });
 
         // Load Fail
         this.audioLoader.load('./assets/fail.mp3', (buffer) => {
             this.sounds.fail.setBuffer(buffer);
             this.sounds.fail.setVolume(0.5);
-            this.sounds.fail.setLoop(false);
         });
     }
 
@@ -42,40 +48,45 @@ export class AudioManager {
         }
     }
 
-    // --- NEW ROBUST LOGIC ---
+    // --- NEW BULLETPROOF LOGIC ---
 
     playBGM() {
-        console.log("Audio: Attempting to play BGM...");
+        // 1. Grant Permission
+        this.canPlayBGM = true;
+        
+        console.log("Audio: playBGM called. Permission granted.");
+
         if (this.sounds.bgm.buffer) {
-            // 1. Force Volume Up
+            // 2. Force Volume Up (in case it was muted)
             this.sounds.bgm.setVolume(0.3);
             
-            // 2. Play if not playing
+            // 3. Play only if not already playing
             if (!this.sounds.bgm.isPlaying) {
                 this.sounds.bgm.play();
-                console.log("Audio: BGM Started.");
             }
         }
     }
 
     stopBGM() {
-        console.log("Audio: Attempting to STOP BGM...");
+        // 1. Revoke Permission IMMEDIATELY
+        this.canPlayBGM = false;
+        
+        console.log("Audio: stopBGM called. Permission revoked.");
+
+        // 2. Force Mute (The "Nuclear" Option)
+        // Even if the audio engine glitches and keeps playing, it will be silent.
+        this.sounds.bgm.setVolume(0);
+        
+        // 3. Stop if running
         if (this.sounds.bgm.isPlaying) {
-            // 1. Force Volume to 0 (The Nuclear Option)
-            this.sounds.bgm.setVolume(0);
-            
-            // 2. Stop the track
             this.sounds.bgm.stop();
-            console.log("Audio: BGM Stopped.");
-        } else {
-            console.log("Audio: BGM was already stopped (or engine thinks so).");
         }
     }
     
-    // ------------------------
+    // -----------------------------
 
     playSuccess() {
-        // Ensure BGM is killed before playing success
+        // Safety: Ensure BGM is stopped/muted
         this.stopBGM(); 
         
         if (this.sounds.success.buffer) {
@@ -85,7 +96,7 @@ export class AudioManager {
     }
 
     playFail() {
-        // Ensure BGM is killed before playing fail
+        // Safety: Ensure BGM is stopped/muted
         this.stopBGM(); 
         
         if (this.sounds.fail.buffer) {
