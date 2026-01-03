@@ -3,7 +3,7 @@ import { getQuestion } from './questions.js';
 export class UI {
     constructor(game, audioManager) {
         this.game = game;
-        this.audioManager = audioManager; // Save audio manager
+        this.audioManager = audioManager;
         this.score = 0;
         this.isGameActive = false;
 
@@ -20,7 +20,6 @@ export class UI {
             crosshair: document.getElementById('crosshair')
         };
 
-        // Bind the start button
         this.elements.startBtn.addEventListener('click', () => this.startGame());
     }
 
@@ -28,7 +27,7 @@ export class UI {
         this.isGameActive = true;
         this.elements.startScreen.classList.add('hidden');
 
-        // 1. WAKE UP AUDIO (Must be before locking mouse)
+        // 1. WAKE UP AUDIO & PLAY BGM
         if (this.audioManager) {
             this.audioManager.resumeContext(); 
             this.audioManager.playBGM();
@@ -47,19 +46,18 @@ export class UI {
         this.isGameActive = false;
         document.exitPointerLock();
 
-        // PAUSE MUSIC (Focus mode)
+        // --- THIS IS THE FIX: PAUSE MUSIC HERE ---
         if (this.audioManager) this.audioManager.pauseBGM();
+        // -----------------------------------------
 
         const q = getQuestion(level);
         
-        // Setup text
         this.elements.category.textContent = q.category;
         this.elements.text.textContent = q.question;
         this.elements.options.innerHTML = '';
         this.elements.feedback.textContent = '';
         this.elements.questionModal.classList.remove('hidden');
 
-        // Create buttons
         q.options.forEach(opt => {
             const btn = document.createElement('button');
             btn.className = 'option-btn';
@@ -67,7 +65,7 @@ export class UI {
             
             btn.onclick = () => {
                 if (opt.correct) {
-                    // SUCCESS
+                    // SUCCESS: Play success sound (BGM is still paused)
                     if (this.audioManager) this.audioManager.playSuccess();
 
                     btn.classList.add('correct-anim');
@@ -83,13 +81,13 @@ export class UI {
                         this.isGameActive = true;
                         document.body.requestPointerLock();
                         
-                        // RESUME MUSIC
+                        // RESUME BGM: Only when back in the maze
                         if (this.audioManager) this.audioManager.playBGM();
                         
                         onSuccess();
                     }, 2500); 
                 } else {
-                    // FAIL
+                    // FAIL: Play fail sound (BGM stays paused)
                     if (this.audioManager) this.audioManager.playFail();
 
                     btn.classList.add('wrong-anim');
@@ -100,11 +98,10 @@ export class UI {
             this.elements.options.appendChild(btn);
         });
 
-        // MathJax Render
         if (window.MathJax && window.MathJax.typesetPromise) {
             window.MathJax.typesetPromise([this.elements.text, this.elements.options]);
         }
-    } // <--- THIS BRACE WAS MISSING BEFORE
+    }
 
     showWinScreen(finalScore) {
         if (this.audioManager) this.audioManager.playSuccess();
