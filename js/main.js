@@ -40,7 +40,7 @@ class Game {
         // Components
         this.player = new Player(this.camera);
         this.maze = new Maze(this.scene);
-        this.ui = new UI(this);
+        //this.ui = new UI(this);
         this.interaction = new Interaction(this.scene, this.camera, this.ui, this.maze);
 
         this.clock = new THREE.Clock();
