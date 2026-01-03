@@ -6,7 +6,7 @@ export class AudioManager {
         camera.add(this.listener);
         this.audioLoader = new THREE.AudioLoader();
         
-        // MODE: 'GAME' (Music On) or 'QUIET' (Music Off)
+        // DEFAULT MODE: QUIET (No music until game explicitly starts)
         this.currentMode = 'QUIET'; 
 
         this.sounds = {
@@ -23,8 +23,7 @@ export class AudioManager {
             this.sounds.bgm.setLoop(true);
             this.sounds.bgm.setVolume(0.3);
             
-            // CRITICAL FIX: Only play if we are currently in GAME mode.
-            // If the user is answering a question (QUIET mode), this will NOT play.
+            // CRITICAL CHECK: Only play if we are in GAME mode right now
             if (this.currentMode === 'GAME' && !this.sounds.bgm.isPlaying) {
                  this.sounds.bgm.play();
             }
@@ -47,21 +46,20 @@ export class AudioManager {
         }
     }
 
-    // --- MODE SWITCHING LOGIC ---
+    // --- MODE SYSTEM (Fixes the non-stop music) ---
     
     setMode(mode) {
-        // console.log(`Audio: Switching to ${mode} mode.`); 
         this.currentMode = mode;
 
         if (mode === 'GAME') {
-            // UNMUTE and PLAY
+            // Unmute and Play
             if (this.sounds.bgm.buffer) {
                 this.sounds.bgm.setVolume(0.3);
                 if (!this.sounds.bgm.isPlaying) this.sounds.bgm.play();
             }
         } 
         else if (mode === 'QUIET') {
-            // MUTE INSTANTLY (Faster and safer than stopping)
+            // Mute Immediately
             if (this.sounds.bgm.isPlaying) {
                 this.sounds.bgm.setVolume(0); 
             }
@@ -69,7 +67,7 @@ export class AudioManager {
     }
 
     playSuccess() {
-        this.setMode('QUIET'); // Ensure BGM is silent
+        this.setMode('QUIET'); // Enforce silence
         if (this.sounds.success.buffer) {
             if (this.sounds.success.isPlaying) this.sounds.success.stop();
             this.sounds.success.play();
@@ -77,7 +75,7 @@ export class AudioManager {
     }
 
     playFail() {
-        this.setMode('QUIET'); // Ensure BGM is silent
+        this.setMode('QUIET'); // Enforce silence
         if (this.sounds.fail.buffer) {
             if (this.sounds.fail.isPlaying) this.sounds.fail.stop();
             this.sounds.fail.play();
