@@ -20,6 +20,11 @@ export class UI {
             crosshair: document.getElementById('crosshair')
         };
 
+        // SAFETY: Make crosshair click-through permanently in case JS toggling fails
+        if (this.elements.crosshair) {
+            this.elements.crosshair.style.pointerEvents = 'none';
+        }
+
         this.elements.startBtn.addEventListener('click', () => this.startGame());
     }
 
@@ -27,7 +32,7 @@ export class UI {
         this.isGameActive = true;
         this.elements.startScreen.classList.add('hidden');
 
-        // Wake up audio and set to GAME mode
+        // AUDIO: Wake up and set to GAME mode
         if (this.audioManager) {
             this.audioManager.resumeContext(); 
             this.audioManager.setMode('GAME');
@@ -43,12 +48,14 @@ export class UI {
 
     showQuestion(level, onSuccess) {
         this.isGameActive = false;
+        
+        // 1. RELEASE MOUSE
         document.exitPointerLock();
 
-        // FIX 1: HIDE CROSSHAIR (Solves Option A not clicking)
+        // 2. HIDE CROSSHAIR (Crucial: prevents blocking clicks)
         if (this.elements.crosshair) this.elements.crosshair.style.display = 'none';
 
-        // FIX 2: SILENCE BGM (Solves continuous music)
+        // 3. SILENCE BGM
         if (this.audioManager) this.audioManager.setMode('QUIET');
 
         const q = getQuestion(level);
@@ -64,9 +71,15 @@ export class UI {
             btn.className = 'option-btn';
             btn.textContent = opt.text;
             
-            btn.onclick = () => {
+            // Mouse Enter/Leave for better feedback
+            btn.onmouseenter = () => btn.style.transform = "scale(1.05)";
+            btn.onmouseleave = () => btn.style.transform = "scale(1)";
+
+            btn.onclick = (e) => {
+                // Stop click propagation
+                e.stopPropagation();
+
                 if (opt.correct) {
-                    // Success Sound
                     if (this.audioManager) this.audioManager.playSuccess();
 
                     btn.classList.add('correct-anim');
@@ -92,7 +105,6 @@ export class UI {
                         onSuccess();
                     }, 2500); 
                 } else {
-                    // Fail Sound
                     if (this.audioManager) this.audioManager.playFail();
 
                     btn.classList.add('wrong-anim');
