@@ -2,6 +2,7 @@ import { getQuestion } from './questions.js';
 
 export class UI {
     constructor(game, audioManager) {
+        console.log("UI: VERSION 5.0 LOADED"); // LOOK FOR THIS LOG
         this.game = game;
         this.audioManager = audioManager;
         this.score = 0;
@@ -20,7 +21,7 @@ export class UI {
             crosshair: document.getElementById('crosshair')
         };
 
-        // SAFETY: Make crosshair click-through permanently in case JS toggling fails
+        // FORCE CROSSHAIR TO BE GHOST (Click-through)
         if (this.elements.crosshair) {
             this.elements.crosshair.style.pointerEvents = 'none';
         }
@@ -32,7 +33,7 @@ export class UI {
         this.isGameActive = true;
         this.elements.startScreen.classList.add('hidden');
 
-        // AUDIO: Wake up and set to GAME mode
+        // WAKE AUDIO
         if (this.audioManager) {
             this.audioManager.resumeContext(); 
             this.audioManager.setMode('GAME');
@@ -47,12 +48,13 @@ export class UI {
     }
 
     showQuestion(level, onSuccess) {
+        console.log("UI: Question Opened");
         this.isGameActive = false;
         
-        // 1. RELEASE MOUSE
+        // 1. UNLOCK MOUSE
         document.exitPointerLock();
 
-        // 2. HIDE CROSSHAIR (Crucial: prevents blocking clicks)
+        // 2. HIDE CROSSHAIR COMPLETELY
         if (this.elements.crosshair) this.elements.crosshair.style.display = 'none';
 
         // 3. SILENCE BGM
@@ -66,20 +68,26 @@ export class UI {
         this.elements.feedback.textContent = '';
         this.elements.questionModal.classList.remove('hidden');
 
+        // FORCE MODAL TO TOP
+        this.elements.questionModal.style.zIndex = "1000";
+        this.elements.questionModal.style.pointerEvents = "auto";
+
         q.options.forEach(opt => {
             const btn = document.createElement('button');
             btn.className = 'option-btn';
             btn.textContent = opt.text;
             
-            // Mouse Enter/Leave for better feedback
-            btn.onmouseenter = () => btn.style.transform = "scale(1.05)";
-            btn.onmouseleave = () => btn.style.transform = "scale(1)";
+            // FORCE CLICKABILITY
+            btn.style.pointerEvents = "all";
+            btn.style.cursor = "pointer";
+            btn.style.zIndex = "1001";
 
             btn.onclick = (e) => {
-                // Stop click propagation
+                // STOP BUBBLING
                 e.stopPropagation();
 
                 if (opt.correct) {
+                    // Success Sound
                     if (this.audioManager) this.audioManager.playSuccess();
 
                     btn.classList.add('correct-anim');
@@ -105,6 +113,7 @@ export class UI {
                         onSuccess();
                     }, 2500); 
                 } else {
+                    // Fail Sound
                     if (this.audioManager) this.audioManager.playFail();
 
                     btn.classList.add('wrong-anim');
@@ -122,7 +131,6 @@ export class UI {
 
     showWinScreen(finalScore) {
         if (this.audioManager) this.audioManager.playSuccess();
-        
         this.isGameActive = false;
         document.exitPointerLock();
         
@@ -132,7 +140,6 @@ export class UI {
         
         if (scoreDisplay) scoreDisplay.textContent = `Final Score: ${finalScore}`;
         if (winScreen) winScreen.classList.remove('hidden');
-        
         if (restartBtn) restartBtn.onclick = () => location.reload();
     }
 }
