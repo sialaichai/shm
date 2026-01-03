@@ -18,26 +18,27 @@ export class AudioManager {
     }
 
     load() {
-        // Load Background Music
-        this.audioLoader.load('./assets/bgm.mp3', (buffer) => {
-            this.sounds.bgm.setBuffer(buffer);
-            this.sounds.bgm.setLoop(true); // Loop it!
-            this.sounds.bgm.setVolume(0.3); // Keep it subtle (30% volume)
-        });
+        // Helper to load sound with error logging
+        const loadSound = (path, soundObj, volume = 0.5, loop = false) => {
+            this.audioLoader.load(
+                path,
+                (buffer) => {
+                    console.log(`Loaded audio: ${path}`); // Success Log
+                    soundObj.setBuffer(buffer);
+                    soundObj.setLoop(loop);
+                    soundObj.setVolume(volume);
+                },
+                null, // Progress callback (not needed)
+                (err) => {
+                    console.error(`FAILED to load audio at: ${path}`, err); // Error Log
+                }
+            );
+        };
 
-        // Load Success Sound
-        this.audioLoader.load('./assets/success.mp3', (buffer) => {
-            this.sounds.success.setBuffer(buffer);
-            this.sounds.success.setVolume(0.8);
-            this.sounds.success.setLoop(false);
-        });
-
-        // Load Fail Sound
-        this.audioLoader.load('./assets/fail.mp3', (buffer) => {
-            this.sounds.fail.setBuffer(buffer);
-            this.sounds.fail.setVolume(0.6);
-            this.sounds.fail.setLoop(false);
-        });
+        // Load all 3 sounds
+        loadSound('./assets/bgm.mp3', this.sounds.bgm, 0.3, true);
+        loadSound('./assets/success.mp3', this.sounds.success, 0.8, false);
+        loadSound('./assets/fail.mp3', this.sounds.fail, 0.6, false);
     }
 
     playBGM() {
