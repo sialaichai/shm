@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<head>
+    
+    
+    
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHM Maze Explorer</title>
+	<script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']] // Allows using $...$ for math
+      },
+      svg: {
+        fontCache: 'global'
+      }
+    };
+    </script>
+    <script type="text/javascript" id="MathJax-script" async
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
+    </script>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700&display=swap" rel="stylesheet">
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+    <script>
+        window.onerror = function (msg, url, line, col, error) {
+            const div = document.createElement('div');
+            div.style.position = 'fixed';
+            div.style.top = '0';
+            div.style.left = '0';
+            div.style.width = '100%';
+            div.style.background = 'red';
+            div.style.color = 'white';
+            div.style.padding = '10px';
+            div.style.zIndex = '9999';
+            div.innerText = 'Error: ' + msg + '\n' + url + ':' + line;
+            document.body.appendChild(div);
+            return false;
+        };
+        // Check if map support exists
+        if (!HTMLScriptElement.supports || !HTMLScriptElement.supports('importmap')) {
+            alert("Your browser does not support import maps. Please use Chrome, Edge, or Firefox.");
+        }
+    </script>
+</head>
+
+<body>
+    <div id="game-container"></div>
+
+    <div id="ui-layer">
+        <div id="hud">
+            <div id="score-display">Tokens: <span id="score">0</span></div>
+            <div id="instructions">WASD to Move | Mouse to Look | Click Tokens</div>
+        </div>
+
+        <div id="crosshair">+</div>
+
+        <div id="question-modal" class="modal hidden">
+            <div class="modal-content glass-panel">
+                <h2 id="q-category">Question Category</h2>
+                <div id="q-text">Question text goes here...</div>
+                <div id="q-options">
+                    <!-- Options populated by JS -->
+                </div>
+                <div id="q-feedback"></div>
+            </div>
+        </div>
+
+        <div id="start-screen" class="glass-panel">
+            <h1>Harmonic Motion Maze</h1>
+            <p>Explore the maze, collect tokens by recalling definitions, and unlock doors by solving problems.</p>
+            <button id="start-btn" class="btn-primary">Enter Simulation</button>
+        </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+
+</html>
