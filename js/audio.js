@@ -27,6 +27,13 @@ export class AudioManager {
         loadSound('./assets/fail.mp3', this.sounds.fail, 0.5, false);
     }
 
+    resumeAudioContext() {
+        if (this.listener.context.state === 'suspended') {
+            this.listener.context.resume().then(() => {
+                console.log("Audio Context Resumed!");
+            });
+        }
+    }
     // --- NEW LOGIC START ---
     
     playBGM() {
