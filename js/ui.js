@@ -20,6 +20,13 @@ export class UI {
             crosshair: document.getElementById('crosshair')
         };
 
+        // --- FIX FOR BROKEN MOUSE CLICK ---
+        // This ensures the crosshair doesn't block clicks on buttons behind it
+        if (this.elements.crosshair) {
+            this.elements.crosshair.style.pointerEvents = 'none';
+        }
+        // ----------------------------------
+
         this.elements.startBtn.addEventListener('click', () => this.startGame());
     }
 
@@ -43,6 +50,8 @@ export class UI {
 
     showQuestion(level, onSuccess) {
         this.isGameActive = false;
+        
+        // Unlock mouse immediately so user can click buttons
         document.exitPointerLock();
 
         // 1. SWITCH TO QUIET MODE (Silences BGM immediately)
