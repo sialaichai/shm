@@ -60,8 +60,10 @@ export class UI {
     showQuestion(level, onSuccess) {
         this.isGameActive = false;
         document.exitPointerLock();
-
-        const q = getQuestion(level);
+		// 1. PAUSE MUSIC (Quiet for concentration)
+        if (this.audioManager) this.audioManager.pauseBGM();
+        
+		const q = getQuestion(level);
         
         this.elements.category.textContent = q.category;
         
@@ -90,16 +92,22 @@ export class UI {
                     
                     // 3. Render feedback math
                     this.elements.feedback.textContent = q.feedback;
-                    // Trigger MathJax to render the feedback immediately
+					this.elements.feedback.style.color = '#00ff66';
+                    
+					// Trigger MathJax to render the feedback immediately
                     if (window.MathJax) {
                         window.MathJax.typesetPromise([this.elements.feedback]);
                     }
 
-                    this.elements.feedback.style.color = '#00ff66';
+                    
                     setTimeout(() => {
                         this.elements.questionModal.classList.add('hidden');
                         this.isGameActive = true;
                         document.body.requestPointerLock();
+
+						// 3. RESUME MUSIC (Game loop returns)
+                        if (this.audioManager) this.audioManager.playBGM();
+						
                         onSuccess();
                     }, 2500); // Increased time to read feedback
                 } else {
