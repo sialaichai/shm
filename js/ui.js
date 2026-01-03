@@ -32,6 +32,8 @@ export class UI {
         // Since this function runs after the "Start" click, it is safe.
         // SAFETY CHECK: Only play if audioManager exists
 	    if (this.audioManager) {
+			// 1. Force the audio engine to wake up
+            this.audioManager.resumeAudioContext();
 	        this.audioManager.playBGM();
 	    }
     }
