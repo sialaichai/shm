@@ -6,7 +6,7 @@ export class AudioManager {
         camera.add(this.listener);
         this.audioLoader = new THREE.AudioLoader();
         
-        // DEFAULT MODE: QUIET (No music until game explicitly starts)
+        // Start in QUIET mode
         this.currentMode = 'QUIET'; 
 
         this.sounds = {
@@ -21,11 +21,14 @@ export class AudioManager {
         this.audioLoader.load('./assets/bgm.mp3', (buffer) => {
             this.sounds.bgm.setBuffer(buffer);
             this.sounds.bgm.setLoop(true);
-            this.sounds.bgm.setVolume(0.3);
             
-            // CRITICAL CHECK: Only play if we are in GAME mode right now
-            if (this.currentMode === 'GAME' && !this.sounds.bgm.isPlaying) {
-                 this.sounds.bgm.play();
+            // DEFAULT TO MUTE (0) to prevent blasts
+            this.sounds.bgm.setVolume(0); 
+            
+            // Only play if GAME mode is active
+            if (this.currentMode === 'GAME') {
+                 this.sounds.bgm.setVolume(0.3);
+                 if (!this.sounds.bgm.isPlaying) this.sounds.bgm.play();
             }
         });
 
@@ -46,28 +49,28 @@ export class AudioManager {
         }
     }
 
-    // --- MODE SYSTEM (Fixes the non-stop music) ---
-    
     setMode(mode) {
         this.currentMode = mode;
 
         if (mode === 'GAME') {
-            // Unmute and Play
+            // UNMUTE AND PLAY
             if (this.sounds.bgm.buffer) {
                 this.sounds.bgm.setVolume(0.3);
                 if (!this.sounds.bgm.isPlaying) this.sounds.bgm.play();
             }
         } 
         else if (mode === 'QUIET') {
-            // Mute Immediately
-            if (this.sounds.bgm.isPlaying) {
-                this.sounds.bgm.setVolume(0); 
+            // MUTE (The Nuclear Option)
+            // We set volume to 0 instead of just pausing
+            // This prevents "ghost" audio if the browser ignores the pause command
+            if (this.sounds.bgm.buffer) {
+                this.sounds.bgm.setVolume(0);
             }
         }
     }
 
     playSuccess() {
-        this.setMode('QUIET'); // Enforce silence
+        this.setMode('QUIET'); // Ensure BGM is silent
         if (this.sounds.success.buffer) {
             if (this.sounds.success.isPlaying) this.sounds.success.stop();
             this.sounds.success.play();
@@ -75,7 +78,7 @@ export class AudioManager {
     }
 
     playFail() {
-        this.setMode('QUIET'); // Enforce silence
+        this.setMode('QUIET'); // Ensure BGM is silent
         if (this.sounds.fail.buffer) {
             if (this.sounds.fail.isPlaying) this.sounds.fail.stop();
             this.sounds.fail.play();
