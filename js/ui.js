@@ -1,11 +1,11 @@
 import { getQuestion } from './questions.js';
 
 export class UI {
-    constructor(game) {
+    constructor(game, audioManager) {
         this.game = game;
         this.score = 0;
         this.isGameActive = false;
-
+		this.audioManager = audioManager; // Save it
         this.elements = {
             hud: document.getElementById('hud'),
             score: document.getElementById('score'),
@@ -26,6 +26,11 @@ export class UI {
         this.isGameActive = true;
         this.elements.startScreen.classList.add('hidden');
         document.body.requestPointerLock();
+		
+		// 2. START MUSIC HERE
+        // Browsers block audio until the user clicks. 
+        // Since this function runs after the "Start" click, it is safe.
+        this.audioManager.playBGM();
     }
 
     addScore(points) {
@@ -73,7 +78,10 @@ export class UI {
             
             btn.onclick = () => {
                 if (opt.correct) {
-                    btn.classList.add('correct-anim');
+                    // 3. PLAY SUCCESS SOUND
+                    this.audioManager.playSuccess();
+					
+					btn.classList.add('correct-anim');
                     
                     // 3. Render feedback math
                     this.elements.feedback.textContent = q.feedback;
@@ -90,14 +98,19 @@ export class UI {
                         onSuccess();
                     }, 2500); // Increased time to read feedback
                 } else {
-                    btn.classList.add('wrong-anim');
+                    // 4. PLAY FAILURE SOUND
+                    this.audioManager.playFail();
+					btn.classList.add('wrong-anim');
+					
                     this.elements.feedback.textContent = "Try again!";
                     this.elements.feedback.style.color = '#ff3333';
                 }
             };
             this.elements.options.appendChild(btn);
         });
-
+		
+		// Optional: Add a victory sound in showWinScreen()
+		
         // 4. TRIGGER MATHJAX RE-RENDER
         // This tells MathJax to find all $...$ in the modal and turn them into math
         if (window.MathJax) {
@@ -107,5 +120,8 @@ export class UI {
 				this.elements.feedback
             ]);
         }
+	showWinScreen(finalScore) {
+		this.audioManager.playSuccess(); // Or a specific victory song	
+		
     }
 }
