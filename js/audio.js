@@ -23,7 +23,8 @@ export class AudioManager {
             this.sounds.bgm.setLoop(true);
             this.sounds.bgm.setVolume(0.3);
             
-            // If the file loads late, only play if we are ALREADY in GAME mode
+            // CRITICAL FIX: Only play if we are currently in GAME mode.
+            // If the user is answering a question (QUIET mode), this will NOT play.
             if (this.currentMode === 'GAME' && !this.sounds.bgm.isPlaying) {
                  this.sounds.bgm.play();
             }
@@ -46,10 +47,10 @@ export class AudioManager {
         }
     }
 
-    // --- THE FIX: MODE SWITCHING ---
+    // --- MODE SWITCHING LOGIC ---
     
     setMode(mode) {
-        console.log(`Audio: Switching to ${mode} mode.`);
+        // console.log(`Audio: Switching to ${mode} mode.`); 
         this.currentMode = mode;
 
         if (mode === 'GAME') {
@@ -60,7 +61,7 @@ export class AudioManager {
             }
         } 
         else if (mode === 'QUIET') {
-            // MUTE INSTANTLY (Faster than stopping)
+            // MUTE INSTANTLY (Faster and safer than stopping)
             if (this.sounds.bgm.isPlaying) {
                 this.sounds.bgm.setVolume(0); 
             }
