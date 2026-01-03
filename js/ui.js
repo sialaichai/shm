@@ -20,13 +20,6 @@ export class UI {
             crosshair: document.getElementById('crosshair')
         };
 
-        // --- FIX FOR BROKEN MOUSE CLICK ---
-        // This ensures the crosshair doesn't block clicks on buttons behind it
-        if (this.elements.crosshair) {
-            this.elements.crosshair.style.pointerEvents = 'none';
-        }
-        // ----------------------------------
-
         this.elements.startBtn.addEventListener('click', () => this.startGame());
     }
 
@@ -34,9 +27,9 @@ export class UI {
         this.isGameActive = true;
         this.elements.startScreen.classList.add('hidden');
 
+        // Wake up audio and set to GAME mode
         if (this.audioManager) {
             this.audioManager.resumeContext(); 
-            // Switch to GAME mode (Starts Music)
             this.audioManager.setMode('GAME');
         }
 
@@ -50,11 +43,12 @@ export class UI {
 
     showQuestion(level, onSuccess) {
         this.isGameActive = false;
-        
-        // Unlock mouse immediately so user can click buttons
         document.exitPointerLock();
 
-        // 1. SWITCH TO QUIET MODE (Silences BGM immediately)
+        // FIX 1: HIDE CROSSHAIR (Solves Option A not clicking)
+        if (this.elements.crosshair) this.elements.crosshair.style.display = 'none';
+
+        // FIX 2: SILENCE BGM (Solves continuous music)
         if (this.audioManager) this.audioManager.setMode('QUIET');
 
         const q = getQuestion(level);
@@ -72,7 +66,7 @@ export class UI {
             
             btn.onclick = () => {
                 if (opt.correct) {
-                    // Play success (Logic inside audio.js keeps BGM quiet)
+                    // Success Sound
                     if (this.audioManager) this.audioManager.playSuccess();
 
                     btn.classList.add('correct-anim');
@@ -85,15 +79,20 @@ export class UI {
 
                     setTimeout(() => {
                         this.elements.questionModal.classList.add('hidden');
+                        
+                        // RESTORE CROSSHAIR
+                        if (this.elements.crosshair) this.elements.crosshair.style.display = 'block';
+
                         this.isGameActive = true;
                         document.body.requestPointerLock();
                         
-                        // 2. BACK TO GAME MODE (Restarts BGM)
+                        // RESUME BGM
                         if (this.audioManager) this.audioManager.setMode('GAME');
                         
                         onSuccess();
                     }, 2500); 
                 } else {
+                    // Fail Sound
                     if (this.audioManager) this.audioManager.playFail();
 
                     btn.classList.add('wrong-anim');
