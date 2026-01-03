@@ -33,6 +33,7 @@ export class UI {
         // SAFETY CHECK: Only play if audioManager exists
 	    if (this.audioManager) {
 			// 1. Force the audio engine to wake up
+			this.audioManager.resumeContext();
             this.audioManager.resumeAudioContext();
 	        this.audioManager.playBGM();
 	    }
