@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 export class AudioManager {
     constructor(camera) {
-        console.log("AUDIO: VERSION 5.0 LOADED"); // LOOK FOR THIS LOG
+        console.log("AUDIO: VERSION 6.0 LOADED (Low Volume)"); 
         this.listener = new THREE.AudioListener();
         camera.add(this.listener);
         this.audioLoader = new THREE.AudioLoader();
@@ -26,19 +26,20 @@ export class AudioManager {
             
             // Only play if GAME mode is active
             if (this.currentMode === 'GAME') {
-                 this.sounds.bgm.setVolume(0.3);
+                 // LOWER VOLUME TO 0.1 (Very Soft)
+                 this.sounds.bgm.setVolume(0.1);
                  if (!this.sounds.bgm.isPlaying) this.sounds.bgm.play();
             }
         });
 
         this.audioLoader.load('./assets/success.mp3', (buffer) => {
             this.sounds.success.setBuffer(buffer);
-            this.sounds.success.setVolume(0.6);
+            this.sounds.success.setVolume(0.5); // Slightly softer success
         });
 
         this.audioLoader.load('./assets/fail.mp3', (buffer) => {
             this.sounds.fail.setBuffer(buffer);
-            this.sounds.fail.setVolume(0.5);
+            this.sounds.fail.setVolume(0.4); // Slightly softer fail
         });
     }
 
@@ -48,23 +49,41 @@ export class AudioManager {
         }
     }
 
+    // --- MODE SYSTEM ---
     setMode(mode) {
         this.currentMode = mode;
         console.log("Audio Mode Set To:", mode);
 
         if (mode === 'GAME') {
             if (this.sounds.bgm.buffer) {
-                this.sounds.bgm.setVolume(0.3);
+                // Set to 0.1 (Soft Ambience)
+                this.sounds.bgm.setVolume(0.1);
                 if (!this.sounds.bgm.isPlaying) this.sounds.bgm.play();
             }
         } 
         else if (mode === 'QUIET') {
-            // FORCE MUTE
+            // FORCE MUTE (Volume 0)
             if (this.sounds.bgm.buffer) {
                 this.sounds.bgm.setVolume(0); 
             }
         }
     }
+
+    // --- TRANSLATOR FUNCTIONS (Fixes mismatched files) ---
+    // If ui.js calls the old "playBGM", we force it to use the new "GAME" mode
+    playBGM() {
+        this.setMode('GAME');
+    }
+
+    // If ui.js calls the old "pauseBGM", we force it to use the new "QUIET" mode
+    pauseBGM() {
+        this.setMode('QUIET');
+    }
+    
+    stopBGM() {
+        this.setMode('QUIET');
+    }
+    // -----------------------------------------------------
 
     playSuccess() {
         this.setMode('QUIET'); 
