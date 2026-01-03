@@ -2,7 +2,7 @@ import { getQuestion } from './questions.js';
 
 export class UI {
     constructor(game, audioManager) {
-        console.log("UI: VERSION 5.0 LOADED"); // LOOK FOR THIS LOG
+        console.log("UI: VERSION 6.0 LOADED");
         this.game = game;
         this.audioManager = audioManager;
         this.score = 0;
@@ -21,7 +21,7 @@ export class UI {
             crosshair: document.getElementById('crosshair')
         };
 
-        // FORCE CROSSHAIR TO BE GHOST (Click-through)
+        // SAFETY: Make crosshair click-through permanently
         if (this.elements.crosshair) {
             this.elements.crosshair.style.pointerEvents = 'none';
         }
@@ -33,7 +33,7 @@ export class UI {
         this.isGameActive = true;
         this.elements.startScreen.classList.add('hidden');
 
-        // WAKE AUDIO
+        // AUDIO START
         if (this.audioManager) {
             this.audioManager.resumeContext(); 
             this.audioManager.setMode('GAME');
@@ -48,13 +48,12 @@ export class UI {
     }
 
     showQuestion(level, onSuccess) {
-        console.log("UI: Question Opened");
         this.isGameActive = false;
         
         // 1. UNLOCK MOUSE
         document.exitPointerLock();
 
-        // 2. HIDE CROSSHAIR COMPLETELY
+        // 2. HIDE CROSSHAIR (Keep this, it fixed the clicking!)
         if (this.elements.crosshair) this.elements.crosshair.style.display = 'none';
 
         // 3. SILENCE BGM
@@ -68,26 +67,21 @@ export class UI {
         this.elements.feedback.textContent = '';
         this.elements.questionModal.classList.remove('hidden');
 
-        // FORCE MODAL TO TOP
+        // FORCE LAYERS
         this.elements.questionModal.style.zIndex = "1000";
-        this.elements.questionModal.style.pointerEvents = "auto";
 
         q.options.forEach(opt => {
             const btn = document.createElement('button');
             btn.className = 'option-btn';
             btn.textContent = opt.text;
             
-            // FORCE CLICKABILITY
             btn.style.pointerEvents = "all";
             btn.style.cursor = "pointer";
-            btn.style.zIndex = "1001";
 
             btn.onclick = (e) => {
-                // STOP BUBBLING
                 e.stopPropagation();
 
                 if (opt.correct) {
-                    // Success Sound
                     if (this.audioManager) this.audioManager.playSuccess();
 
                     btn.classList.add('correct-anim');
@@ -107,13 +101,12 @@ export class UI {
                         this.isGameActive = true;
                         document.body.requestPointerLock();
                         
-                        // RESUME BGM
+                        // RESUME BGM (Low Volume)
                         if (this.audioManager) this.audioManager.setMode('GAME');
                         
                         onSuccess();
                     }, 2500); 
                 } else {
-                    // Fail Sound
                     if (this.audioManager) this.audioManager.playFail();
 
                     btn.classList.add('wrong-anim');
