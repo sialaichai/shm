@@ -30,7 +30,10 @@ export class UI {
 		// 2. START MUSIC HERE
         // Browsers block audio until the user clicks. 
         // Since this function runs after the "Start" click, it is safe.
-        this.audioManager.playBGM();
+        // SAFETY CHECK: Only play if audioManager exists
+	    if (this.audioManager) {
+	        this.audioManager.playBGM();
+	    }
     }
 
     addScore(points) {
@@ -78,8 +81,10 @@ export class UI {
             
             btn.onclick = () => {
                 if (opt.correct) {
-                    // 3. PLAY SUCCESS SOUND
-                    this.audioManager.playSuccess();
+				                    // SAFETY CHECK
+				    if (this.audioManager) {
+				        this.audioManager.playSuccess();
+				    }
 					
 					btn.classList.add('correct-anim');
                     
@@ -99,7 +104,10 @@ export class UI {
                     }, 2500); // Increased time to read feedback
                 } else {
                     // 4. PLAY FAILURE SOUND
-                    this.audioManager.playFail();
+                    // SAFETY CHECK
+				    if (this.audioManager) {
+				        this.audioManager.playFail();
+				    }
 					btn.classList.add('wrong-anim');
 					
                     this.elements.feedback.textContent = "Try again!";
@@ -122,7 +130,10 @@ export class UI {
         }
 	}	
 	showWinScreen(finalScore) {
-		this.audioManager.playSuccess(); // Or a specific victory song	
+		// SAFETY CHECK
+	    if (this.audioManager) {
+	        this.audioManager.playSuccess(); 
+	    }
 		
     }
 }
