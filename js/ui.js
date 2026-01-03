@@ -27,10 +27,10 @@ export class UI {
         this.isGameActive = true;
         this.elements.startScreen.classList.add('hidden');
 
-        // 1. Initialize Audio
         if (this.audioManager) {
             this.audioManager.resumeContext(); 
-            this.audioManager.playBGM();
+            // Switch to GAME mode (Starts Music)
+            this.audioManager.setMode('GAME');
         }
 
         document.body.requestPointerLock();
@@ -45,10 +45,8 @@ export class UI {
         this.isGameActive = false;
         document.exitPointerLock();
 
-        // --- FORCE STOP MUSIC ---
-        console.log("UI: Question triggered. Stopping Music.");
-        if (this.audioManager) this.audioManager.stopBGM();
-        // ------------------------
+        // 1. SWITCH TO QUIET MODE (Silences BGM immediately)
+        if (this.audioManager) this.audioManager.setMode('QUIET');
 
         const q = getQuestion(level);
         
@@ -65,7 +63,7 @@ export class UI {
             
             btn.onclick = () => {
                 if (opt.correct) {
-                    // Success sound (BGM is already stopped)
+                    // Play success (Logic inside audio.js keeps BGM quiet)
                     if (this.audioManager) this.audioManager.playSuccess();
 
                     btn.classList.add('correct-anim');
@@ -81,14 +79,12 @@ export class UI {
                         this.isGameActive = true;
                         document.body.requestPointerLock();
                         
-                        // RESTART MUSIC
-                        console.log("UI: Returning to game. Restarting Music.");
-                        if (this.audioManager) this.audioManager.playBGM();
+                        // 2. BACK TO GAME MODE (Restarts BGM)
+                        if (this.audioManager) this.audioManager.setMode('GAME');
                         
                         onSuccess();
                     }, 2500); 
                 } else {
-                    // Fail sound
                     if (this.audioManager) this.audioManager.playFail();
 
                     btn.classList.add('wrong-anim');
