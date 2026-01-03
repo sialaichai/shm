@@ -120,6 +120,7 @@ export class UI {
 				this.elements.feedback
             ]);
         }
+	}	
 	showWinScreen(finalScore) {
 		this.audioManager.playSuccess(); // Or a specific victory song	
 		
