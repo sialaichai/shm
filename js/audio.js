@@ -27,6 +27,14 @@ export class AudioManager {
         loadSound('./assets/fail.mp3', this.sounds.fail, 0.5, false);
     }
 
+
+    // Add this method inside your AudioManager class
+    resumeContext() {
+        if (this.listener.context.state === 'suspended') {
+            this.listener.context.resume();
+        }
+    }
+    
     resumeAudioContext() {
         if (this.listener.context.state === 'suspended') {
             this.listener.context.resume().then(() => {
