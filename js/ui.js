@@ -25,18 +25,16 @@ export class UI {
     startGame() {
         this.isGameActive = true;
         this.elements.startScreen.classList.add('hidden');
+
+        // FIX 1: Wake up Audio FIRST, then lock the mouse.
+        // Swapping this order ensures the browser accepts the "click" as an audio trigger.
+        if (this.audioManager) {
+            this.audioManager.resumeContext();
+            this.audioManager.playBGM();
+        }
+
+        // Lock mouse second
         document.body.requestPointerLock();
-		
-		// 2. START MUSIC HERE
-        // Browsers block audio until the user clicks. 
-        // Since this function runs after the "Start" click, it is safe.
-        // SAFETY CHECK: Only play if audioManager exists
-	    if (this.audioManager) {
-			// 1. Force the audio engine to wake up
-			this.audioManager.resumeContext();
-            this.audioManager.resumeAudioContext();
-	        this.audioManager.playBGM();
-	    }
     }
 
     addScore(points) {
@@ -123,10 +121,60 @@ export class UI {
 					
                     this.elements.feedback.textContent = "Try again!";
                     this.elements.feedback.style.color = '#ff3333';
+            showQuestion(level, onSuccess) {
+        this.isGameActive = false;
+        document.exitPointerLock();
+
+        // FIX 2: This line was missing! You must pause BGM here.
+        if (this.audioManager) this.audioManager.pauseBGM();
+
+        const q = getQuestion(level);
+        this.elements.category.textContent = q.category;
+        this.elements.text.textContent = q.question;
+        this.elements.options.innerHTML = '';
+        this.elements.feedback.textContent = '';
+        this.elements.questionModal.classList.remove('hidden');
+
+        q.options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.textContent = opt.text;
+            
+            btn.onclick = () => {
+                if (opt.correct) {
+                    if (this.audioManager) this.audioManager.playSuccess();
+
+                    btn.classList.add('correct-anim');
+                    this.elements.feedback.textContent = q.feedback;
+                    this.elements.feedback.style.color = '#00ff66';
+
+                    if (window.MathJax) window.MathJax.typesetPromise([this.elements.feedback]);
+
+                    setTimeout(() => {
+                        this.elements.questionModal.classList.add('hidden');
+                        this.isGameActive = true;
+                        document.body.requestPointerLock();
+                        
+                        // FIX 3: Resume BGM when they return to the game
+                        if (this.audioManager) this.audioManager.playBGM();
+                        
+                        onSuccess();
+                    }, 2500);
+                } else {
+                    if (this.audioManager) this.audioManager.playFail();
+
+                    btn.classList.add('wrong-anim');
+                    this.elements.feedback.textContent = "Try again!";
+                    this.elements.feedback.style.color = '#ff3333';
                 }
             };
             this.elements.options.appendChild(btn);
         });
+
+        if (window.MathJax) {
+            window.MathJax.typesetPromise([this.elements.text, this.elements.options]);
+        }
+    }
 		
 		// Optional: Add a victory sound in showWinScreen()
 		
