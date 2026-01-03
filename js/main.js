@@ -3,7 +3,6 @@ import { Maze } from './maze.js';
 import { Player } from './player.js';
 import { Interaction } from './interaction.js';
 import { UI } from './ui.js';
-import { AudioManager } from './audio.js';
 
 class Game {
     constructor() {
@@ -11,13 +10,7 @@ class Game {
         this.scene.fog = new THREE.FogExp2(0x050510, 0.15); // Deep space fog
 
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-		// 2. Initialize Audio Manager
-        this.audioManager = new AudioManager(this.camera);
-        this.audioManager.load();
 
-        // 3. Pass audioManager to UI so UI can trigger sounds
-        this.ui = new UI(this, this.audioManager);
-		
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setPixelRatio(window.devicePixelRatio);
