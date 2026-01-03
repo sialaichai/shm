@@ -6,7 +6,7 @@ export class AudioManager {
         camera.add(this.listener);
         this.audioLoader = new THREE.AudioLoader();
         
-        // Flag to remember if we should be playing
+        // Flag: Does the user want music right now?
         this.shouldPlayBGM = false; 
 
         this.sounds = {
@@ -23,19 +23,20 @@ export class AudioManager {
                 soundObj.setLoop(loop);
                 soundObj.setVolume(volume);
 
-                // FIX 4: If BGM finishes loading AND we already clicked start, play immediately
+                // Auto-start BGM if it finished loading AFTER we clicked start
                 if (isBGM && this.shouldPlayBGM && !soundObj.isPlaying) {
                     soundObj.play();
                 }
             });
         };
 
-        // Mark the first one as BGM
+        // Load files
         loadSound('./assets/bgm.mp3', this.sounds.bgm, 0.3, true, true);
         loadSound('./assets/success.mp3', this.sounds.success, 0.6, false);
         loadSound('./assets/fail.mp3', this.sounds.fail, 0.5, false);
     }
 
+    // Wake up the browser audio engine
     resumeContext() {
         if (this.listener.context.state === 'suspended') {
             this.listener.context.resume();
@@ -43,16 +44,15 @@ export class AudioManager {
     }
 
     playBGM() {
-        this.shouldPlayBGM = true; // Remember that user wants music
-        
-        // Only play if buffer is ready
+        this.shouldPlayBGM = true;
+        // Only play if the file is actually ready
         if (this.sounds.bgm.buffer && !this.sounds.bgm.isPlaying) {
             this.sounds.bgm.play();
         }
     }
 
     pauseBGM() {
-        this.shouldPlayBGM = false; // Stop auto-playing
+        this.shouldPlayBGM = false;
         if (this.sounds.bgm.isPlaying) {
             this.sounds.bgm.pause();
         }
