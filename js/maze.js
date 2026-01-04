@@ -77,7 +77,14 @@ createSurfaceTexture(bgColor, gridColor) {
             'E = K + U', 
             'U = ½kx²', 
             'ω = √(k/m)',
-            'T = 2π√(L/g)'
+            'T = 2π√(L/g)', 
+            'x = x₀sin(ωt)', 
+            'v = v₀cos(ωt)',
+            'v = ±ω√(x₀²-x²)', 
+            'T = 2π√(m/k)', 
+            'E = ½mω²x₀²',
+            'KE = ½mω²(x₀²-x²)',
+            'PE = ½mω²x²'
         ];
 
         for (let row = 0; row < tileCount; row++) {
