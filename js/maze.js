@@ -1,17 +1,16 @@
 import * as THREE from 'three';
 
 export class Maze {
-    // 1. ACCEPT UI HERE
     constructor(scene, ui) {
         this.scene = scene;
-        this.ui = ui; // Save UI reference
+        this.ui = ui; 
         this.width = 10;
         this.depth = 10;
         this.cellSize = 4;
         this.colliders = []; 
         this.tokens = [];
         this.doors = [];
-        this.questionCounter = 0; // The ID Counter
+        this.questionCounter = 0; 
         
         // Compact Grid (11x11)
         this.grid = [
@@ -31,31 +30,32 @@ export class Maze {
 
     createSurfaceTexture(bgColor, gridColor) {
         const canvas = document.createElement('canvas');
-        canvas.width = 512;
-        canvas.height = 512;
+        // High Res for crisp text
+        canvas.width = 1024;
+        canvas.height = 1024;
         const ctx = canvas.getContext('2d');
 
         // Background
         ctx.fillStyle = bgColor;
-        ctx.fillRect(0, 0, 512, 512);
+        ctx.fillRect(0, 0, 1024, 1024);
 
-        // Grid
+        // Grid (Thicker)
         ctx.strokeStyle = gridColor;
-        ctx.lineWidth = 2;
-        for (let i = 0; i <= 512; i += 128) { 
-            ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(512, i); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 512); ctx.stroke();
+        ctx.lineWidth = 4;
+        for (let i = 0; i <= 1024; i += 256) { 
+            ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(1024, i); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 1024); ctx.stroke();
         }
 
         const graphs = ['spring', 'pendulum', 'energy_time', 'energy_disp', 'acc_disp', 'vel_disp'];
         const equations = ['a = -ω²x', 'x = x₀sin(ωt)', 'v = ±ω√(x₀²-x²)', 'T = 2π√(m/k)', 'E = ½mω²x₀²'];
 
-        for (let row = 0; row < 4; row++) {
-            for (let col = 0; col < 4; col++) {
-                if (Math.random() > 0.4) continue; 
+        for (let row = 0; row < 2; row++) {
+            for (let col = 0; col < 2; col++) {
+                if (Math.random() > 0.5) continue; 
 
-                const cx = col * 128 + 64; 
-                const cy = row * 128 + 64;
+                const cx = col * 512 + 256; 
+                const cy = row * 512 + 256;
 
                 ctx.save();
                 const angle = Math.floor(Math.random() * 4) * (Math.PI / 2);
@@ -63,82 +63,59 @@ export class Maze {
                 ctx.rotate(angle);
                 ctx.translate(-cx, -cy);
 
-                const x0 = cx - 54; 
-                const y0 = cy - 54;
-                const w = 108;
-                const h = 108;
+                const w = 300;
+                const h = 300;
+                const x0 = cx - w/2; 
+                const y0 = cy - h/2;
 
                 if (Math.random() > 0.5) {
+                    // Draw Graph
                     const type = graphs[Math.floor(Math.random() * graphs.length)];
-                    ctx.beginPath(); ctx.rect(x0, y0, w, h); ctx.clip();
-                    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fill();
-                    ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.strokeRect(x0, y0, w, h);
-                    ctx.lineWidth = 4; 
+                    
+                    // Box Background
+                    ctx.fillStyle = 'rgba(0,0,0,0.8)'; 
+                    ctx.fillRect(x0 - 20, y0 - 20, w + 40, h + 40);
+                    
+                    ctx.strokeStyle = '#ffffff'; 
+                    ctx.lineWidth = 6; 
+                    ctx.strokeRect(x0, y0, w, h);
 
                     const setNeon = (color) => {
                         ctx.strokeStyle = color;
                         ctx.shadowColor = color;
-                        ctx.shadowBlur = 15; 
+                        ctx.shadowBlur = 40; 
+                        ctx.lineWidth = 12;  
+                        ctx.lineCap = 'round';
                     };
 
                     if (type === 'spring') {
-                        setNeon('#00ff00'); ctx.beginPath();
-                        ctx.moveTo(cx - 20, y0 + 10); ctx.lineTo(cx + 20, y0 + 10);
-                        let sy = y0 + 10;
-                        for (let i = 0; i < 10; i++) ctx.lineTo(cx + (i % 2 === 0 ? 10 : -10), sy += 5);
+                        setNeon('#00ff66'); ctx.beginPath();
+                        let sy = y0 + 50;
+                        ctx.moveTo(cx, y0);
+                        for (let i = 0; i < 12; i++) ctx.lineTo(cx + (i % 2 === 0 ? 40 : -40), sy += 20);
                         ctx.stroke();
-                        ctx.fillStyle = '#00ff00'; ctx.shadowColor = '#00ff00'; ctx.shadowBlur = 15;
-                        ctx.fillRect(cx - 10, sy, 20, 20);
+                        ctx.fillStyle = '#00ff66'; ctx.fillRect(cx - 30, sy, 60, 60);
                     }
                     else if (type === 'pendulum') {
                         setNeon('#ff00ff'); ctx.beginPath();
-                        ctx.moveTo(cx, y0 + 10); ctx.lineTo(cx + 30, y0 + 80); ctx.stroke();
-                        ctx.beginPath(); ctx.arc(cx + 30, y0 + 80, 10, 0, Math.PI * 2);
+                        ctx.moveTo(cx, y0); ctx.lineTo(cx + 80, y0 + 200); ctx.stroke();
+                        ctx.beginPath(); ctx.arc(cx + 80, y0 + 200, 30, 0, Math.PI * 2);
                         ctx.fillStyle = '#ff00ff'; ctx.fill();
                     }
-                    else if (type === 'energy_time') {
-                        setNeon('#ff3333'); ctx.beginPath();
-                        for (let i = 0; i < w; i++) {
-                            let val = Math.sin(i * 0.1) ** 2;
-                            let py = y0 + h - (val * h * 0.8) - 10;
-                            if (i === 0) ctx.moveTo(x0 + i, py); else ctx.lineTo(x0 + i, py);
-                        }
-                        ctx.stroke();
-                        setNeon('#3333ff'); ctx.beginPath();
-                        for (let i = 0; i < w; i++) {
-                            let val = Math.cos(i * 0.1) ** 2;
-                            let py = y0 + h - (val * h * 0.8) - 10;
-                            if (i === 0) ctx.moveTo(x0 + i, py); else ctx.lineTo(x0 + i, py);
-                        }
-                        ctx.stroke();
-                    }
-                    else if (type === 'energy_disp') {
-                        setNeon('#ffff00'); ctx.beginPath();
-                        for (let i = -w / 2; i < w / 2; i++) {
-                            let x_norm = i / (w / 2);
-                            let py = cy + 20 - (x_norm * x_norm * h * 0.6);
-                            if (i === -w / 2) ctx.moveTo(cx + i, py); else ctx.lineTo(cx + i, py);
-                        }
-                        ctx.stroke();
-                    }
-                    else if (type === 'acc_disp') {
+                    else {
                         setNeon('#00ecff'); ctx.beginPath();
-                        ctx.moveTo(x0 + 10, y0 + 10); ctx.lineTo(x0 + w - 10, y0 + h - 10); ctx.stroke();
-                    }
-                    else if (type === 'vel_disp') {
-                        setNeon('#ffa500'); ctx.beginPath();
                         ctx.ellipse(cx, cy, w * 0.4, h * 0.3, 0, 0, Math.PI * 2); ctx.stroke();
                     }
                 } else {
+                    // Draw Equation (Giant Font)
                     const eq = equations[Math.floor(Math.random() * equations.length)];
                     ctx.fillStyle = '#ffffff';
                     ctx.shadowColor = '#00ecff';
-                    ctx.shadowBlur = 10;
-                    ctx.font = `bold 24px sans-serif`;
+                    ctx.shadowBlur = 30;
+                    ctx.font = `bold 80px "Courier New", monospace`; 
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillText(eq, cx, cy);
-                    ctx.shadowBlur = 0;
                 }
                 ctx.restore();
             }
@@ -147,12 +124,13 @@ export class Maze {
         const texture = new THREE.CanvasTexture(canvas);
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(15, 15);
+        texture.repeat.set(4, 4); 
+        texture.anisotropy = 16; 
         return texture;
     }
 
     generate() {
-        this.questionCounter = 0; // Reset IDs
+        this.questionCounter = 0;
 
         // Walls
         const canvas = document.createElement('canvas');
@@ -184,11 +162,13 @@ export class Maze {
         const wallGeo = new THREE.BoxGeometry(this.cellSize, 4, this.cellSize);
         const wallMat = new THREE.MeshLambertMaterial({ color: 0xffffff, map: wallTex });
 
-        // Floor & Ceiling
-        const floorTex = this.createSurfaceTexture('#ccccdd', '#888899');
+        // Floor (Dark + Neon Ready)
+        const floorTex = this.createSurfaceTexture('#1a1a24', '#333344');
         const floorGeo = new THREE.PlaneGeometry(this.grid[0].length * this.cellSize, this.grid.length * this.cellSize);
-        const floorMat = new THREE.MeshLambertMaterial({
-            color: 0xffffff, emissive: 0x666666, map: floorTex, side: THREE.DoubleSide
+        const floorMat = new THREE.MeshStandardMaterial({ 
+            map: floorTex, 
+            roughness: 0.2, 
+            metalness: 0.5 
         });
 
         const floor = new THREE.Mesh(floorGeo, floorMat);
@@ -199,16 +179,15 @@ export class Maze {
         );
         this.scene.add(floor);
 
-        const ceilTex = this.createSurfaceTexture('#222233', '#444455');
-        const ceilMat = new THREE.MeshLambertMaterial({
-            color: 0xcccccc, emissive: 0x333333, map: ceilTex, side: THREE.DoubleSide
-        });
+        // Ceiling
+        const ceilTex = this.createSurfaceTexture('#111111', '#222222');
+        const ceilMat = new THREE.MeshLambertMaterial({ map: ceilTex, side: THREE.DoubleSide });
         const ceil = new THREE.Mesh(floorGeo, ceilMat);
         ceil.rotation.x = Math.PI / 2;
         ceil.position.set(floor.position.x, 2, floor.position.z);
         this.scene.add(ceil);
 
-        // Grid
+        // Grid Generation
         for (let row = 0; row < this.grid.length; row++) {
             for (let col = 0; col < this.grid[row].length; col++) {
                 const type = this.grid[row][col];
@@ -225,9 +204,10 @@ export class Maze {
                     this.createToken(x, z);
                 } 
                 else if (type === 3) { // Door
-                    this.createDoor(x, z);
+                    // PASS ROW/COL FOR ROTATION CHECK
+                    this.createDoor(x, z, row, col);
                 } 
-                else if (type === 0 && Math.random() < 0.25) { // Random Token
+                else if (type === 0 && Math.random() < 0.25) { 
                     this.createToken(x, z);
                 }
             }
@@ -253,47 +233,57 @@ export class Maze {
         const token = new THREE.Mesh(geo, mat);
         token.position.set(x, 1, z);
 
-        // --- ID & REGISTRATION ---
-        const qID = this.questionCounter++; // GENERATE ID
+        const qID = this.questionCounter++;
         const level = Math.random() < 0.6 ? 1 : 2; 
         
         token.userData = { 
             type: 'token', 
-            id: qID, // STORE ID
+            id: qID, 
             level: level, 
             rotSpeed: { x: Math.random() * 2, y: Math.random() * 2 } 
         };
 
-        // TELL UI TO REGISTER THIS ID
         if (this.ui) this.ui.registerQuestion(qID, level);
-        // -------------------------
 
         this.scene.add(token);
         this.tokens.push(token);
     }
 
-    createDoor(x, z) {
-        const geo = new THREE.BoxGeometry(this.cellSize, 4, 0.5);
+    createDoor(x, z, row, col) {
+        // --- ROTATION FIX ---
+        // Check neighbors: If Left (col-1) and Right (col+1) are NOT walls,
+        // it implies a horizontal hallway. We must rotate the door.
+        let isHorizontal = false;
+        if (col > 0 && col < this.grid[0].length - 1) {
+            if (this.grid[row][col-1] !== 1 && this.grid[row][col+1] !== 1) {
+                isHorizontal = true;
+            }
+        }
+
+        // Standard: Wide (cellSize), Thin (0.5)
+        // Horizontal: Thin (0.5), Wide (cellSize)
+        const width = isHorizontal ? 0.5 : this.cellSize;
+        const depth = isHorizontal ? this.cellSize : 0.5;
+
+        const geo = new THREE.BoxGeometry(width, 4, depth);
+        // ---------------------
+
         const mat = new THREE.MeshStandardMaterial({ color: 0xff00de, transparent: true, opacity: 0.8 });
         const door = new THREE.Mesh(geo, mat);
         door.position.set(x, 0, z);
 
-        // 1. ADD TO SCENE FIRST (Safety Check)
+        // 1. ADD TO SCENE FIRST (Safety)
         this.scene.add(door);
         this.doors.push(door);
         this.colliders.push(new THREE.Box3().setFromObject(door));
 
-        // 2. SETUP DATA
+        // 2. REGISTER
         const qID = this.questionCounter++; 
         const level = 3; 
         
-        door.userData = { 
-            type: 'door', 
-            id: qID, 
-            level: level 
-        };
+        door.userData = { type: 'door', id: qID, level: level };
 
-        // 3. REGISTER WITH UI (If this crashes, the door still blocks the player)
+        // 3. SAFE UI CALL
         if (this.ui && typeof this.ui.registerQuestion === 'function') {
             try {
                 this.ui.registerQuestion(qID, level);
