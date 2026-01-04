@@ -38,13 +38,14 @@ export class Maze {
         ctx.fillStyle = bgColor;
         ctx.fillRect(0, 0, 2048, 2048);
 
-        // --- GRID LOGIC ---
-        const tileCount = 11; 
-        const tileSize = 2048 / tileCount; // ~186px
+        // --- GRID CHANGE: 50% SMALLER TILES ---
+        // Was 11 (1 tile per room), now 22 (4 tiles per room)
+        const tileCount = 22; 
+        const tileSize = 2048 / tileCount; // ~93px per tile
 
         // Grid Lines
         ctx.strokeStyle = gridColor;
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 2; // Thinner lines for smaller tiles
         for (let i = 0; i <= tileCount; i++) {
             const pos = i * tileSize;
             ctx.beginPath(); ctx.moveTo(0, pos); ctx.lineTo(2048, pos); ctx.stroke();
@@ -58,22 +59,21 @@ export class Maze {
         for (let row = 0; row < tileCount; row++) {
             for (let col = 0; col < tileCount; col++) {
                 
-                // 40% chance to have a drawing
-                if (Math.random() > 0.4) continue; 
+                // Reduced skip chance so smaller tiles look dense
+                if (Math.random() > 0.3) continue; 
 
                 const cx = col * tileSize + (tileSize / 2); 
                 const cy = row * tileSize + (tileSize / 2);
 
                 ctx.save();
                 
-                // Random rotation
                 const angle = Math.floor(Math.random() * 4) * (Math.PI / 2);
                 ctx.translate(cx, cy);
                 ctx.rotate(angle);
                 ctx.translate(-cx, -cy);
 
-                const w = tileSize * 0.6; // 60% of room width
-                const h = tileSize * 0.6;
+                const w = tileSize * 0.7; // 70% of tile
+                const h = tileSize * 0.7;
                 const x0 = cx - w/2; 
                 const y0 = cy - h/2;
 
@@ -82,17 +82,17 @@ export class Maze {
                     const type = graphs[Math.floor(Math.random() * graphs.length)];
                     
                     ctx.fillStyle = 'rgba(0,0,0,0.6)'; 
-                    ctx.fillRect(x0 - 10, y0 - 10, w + 20, h + 20);
+                    ctx.fillRect(x0 - 5, y0 - 5, w + 10, h + 10); // Smaller padding
                     
                     ctx.strokeStyle = '#ffffff'; 
-                    ctx.lineWidth = 4; 
+                    ctx.lineWidth = 3; 
                     ctx.strokeRect(x0, y0, w, h);
 
                     const setNeon = (color) => {
                         ctx.strokeStyle = color;
                         ctx.shadowColor = color;
-                        ctx.shadowBlur = 20; 
-                        ctx.lineWidth = 6;  
+                        ctx.shadowBlur = 10; // Less blur for smaller items
+                        ctx.lineWidth = 4;  
                         ctx.lineCap = 'round';
                     };
 
@@ -100,14 +100,14 @@ export class Maze {
                         setNeon('#00ff66'); ctx.beginPath();
                         let sy = y0 + (h*0.2);
                         ctx.moveTo(cx, y0);
-                        for (let i = 0; i < 8; i++) ctx.lineTo(cx + (i % 2 === 0 ? 15 : -15), sy += (h*0.08));
+                        for (let i = 0; i < 8; i++) ctx.lineTo(cx + (i % 2 === 0 ? 10 : -10), sy += (h*0.08));
                         ctx.stroke();
-                        ctx.fillStyle = '#00ff66'; ctx.fillRect(cx - 15, sy, 30, 30);
+                        ctx.fillStyle = '#00ff66'; ctx.fillRect(cx - 10, sy, 20, 20);
                     }
                     else if (type === 'pendulum') {
                         setNeon('#ff00ff'); ctx.beginPath();
-                        ctx.moveTo(cx, y0); ctx.lineTo(cx + 40, y0 + h*0.8); ctx.stroke();
-                        ctx.beginPath(); ctx.arc(cx + 40, y0 + h*0.8, 15, 0, Math.PI * 2);
+                        ctx.moveTo(cx, y0); ctx.lineTo(cx + 20, y0 + h*0.8); ctx.stroke();
+                        ctx.beginPath(); ctx.arc(cx + 20, y0 + h*0.8, 10, 0, Math.PI * 2);
                         ctx.fillStyle = '#ff00ff'; ctx.fill();
                     }
                     else {
@@ -115,19 +115,19 @@ export class Maze {
                         ctx.ellipse(cx, cy, w * 0.4, h * 0.3, 0, 0, Math.PI * 2); ctx.stroke();
                     }
                 } else {
-                    // --- DRAW EQUATION (FIXED SIZE) ---
+                    // --- DRAW EQUATION ---
                     const eq = equations[Math.floor(Math.random() * equations.length)];
                     ctx.fillStyle = '#ffffff';
                     ctx.shadowColor = '#00ecff';
-                    ctx.shadowBlur = 15;
+                    ctx.shadowBlur = 10;
                     
-                    // Reduced font size (15% of room width instead of 25%)
-                    ctx.font = `bold ${Math.floor(tileSize * 0.15)}px "Courier New", monospace`; 
+                    // Auto-scale: 18% of smaller tile
+                    ctx.font = `bold ${Math.floor(tileSize * 0.18)}px "Courier New", monospace`; 
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     
-                    // CLAMP WIDTH: Text cannot be wider than 80% of the room
-                    ctx.fillText(eq, cx, cy, tileSize * 0.8);
+                    // Clamp width
+                    ctx.fillText(eq, cx, cy, tileSize * 0.9);
                 }
                 ctx.restore();
             }
@@ -135,7 +135,7 @@ export class Maze {
 
         const texture = new THREE.CanvasTexture(canvas);
         
-        // UNIQUE MAPPING (Do not repeat)
+        // UNIQUE MAPPING (Still 1:1, but grid is denser)
         texture.wrapS = THREE.ClampToEdgeWrapping;
         texture.wrapT = THREE.ClampToEdgeWrapping;
         texture.repeat.set(1, 1); 
