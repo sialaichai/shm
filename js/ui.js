@@ -65,6 +65,12 @@ export class UI {
     }
 
     updateHUD() {
+        // Safety Check: If the HTML element is missing, don't crash
+        if (!this.elements.score) {
+            console.warn("UI Warning: 'score' element not found in HTML.");
+            return;
+        }
+
         this.elements.score.innerHTML = `
             Score: <span style="color:#00ff66">${this.score}</span> / ${this.maxScore} <br>
             <span style="font-size: 0.8em; color:#ccc;">Progress: ${this.questionsCompleted} / ${this.totalQuestions}</span>
