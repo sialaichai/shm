@@ -12,6 +12,7 @@ export class Interaction {
         this.workingVector = new THREE.Vector3(); 
         
         document.addEventListener('click', this.onClick.bind(this));
+        console.log("DEBUG: Interaction System Loaded");
     }
 
     check() {
@@ -28,14 +29,18 @@ export class Interaction {
         if (intersects.length > 0) {
             const object = intersects[0].object;
 
-            // WALKING LOGIC (Was already correct, kept it safe)
+            // --- WALKING LOGIC (This was already correct, but adding logs) ---
             if (object.userData.type === 'token') {
+                console.log("DEBUG: Walking Collision with Token. ID:", object.userData.id);
                 this.ui.showQuestion(object.userData.id, () => {
+                    console.log("DEBUG: Token Removed (Walking)");
                     this.maze.removeToken(object);
                 });
             } 
             else if (object.userData.type === 'door') {
+                console.log("DEBUG: Walking Collision with Door. ID:", object.userData.id);
                 this.ui.showQuestion(object.userData.id, () => {
+                    console.log("DEBUG: Door Opened (Walking)");
                     this.maze.openDoor(object);
                 });
             }
@@ -45,38 +50,43 @@ export class Interaction {
     onClick() {
         if (!this.ui.isGameActive) return;
         
-        // Ensure pointer lock so clicks don't drift
         if (document.pointerLockElement !== document.body) {
             document.body.requestPointerLock();
             return;
         }
 
         this.raycaster.setFromCamera(this.center, this.camera);
-        this.raycaster.far = 10; // Clicks reach further
+        this.raycaster.far = 10; 
 
-        // Check against all maze objects
         const interactables = [...this.maze.tokens, ...this.maze.doors];
         const intersects = this.raycaster.intersectObjects(interactables);
 
         if (intersects.length > 0) {
             const object = intersects[0].object;
+            console.log("DEBUG: Click Detected on Object", object.userData);
             this.handleInteraction(object);
         }
     }
 
     handleInteraction(object) {
-        // --- THE FIX IS HERE ---
-        
-        // 1. We pass 'object.userData.id' (Unique ID), NOT 'level'.
-        // 2. We DELETED 'this.ui.addScore(10)'. The UI class now calculates points itself.
+        // --- THIS WAS THE BROKEN PART ---
+        // I have removed 'this.ui.addScore(10)'
+        // I have changed 'level' to 'id'
         
         if (object.userData.type === 'token') {
+            console.log("DEBUG: Handling Click on Token. Sending ID:", object.userData.id);
+            
+            // CORRECT CALL: Pass ID, let UI handle scoring
             this.ui.showQuestion(object.userData.id, () => {
+                console.log("DEBUG: Question Solved (Click). Removing Token.");
                 this.maze.removeToken(object);
             });
         } 
         else if (object.userData.type === 'door') {
+            console.log("DEBUG: Handling Click on Door. Sending ID:", object.userData.id);
+            
             this.ui.showQuestion(object.userData.id, () => {
+                console.log("DEBUG: Question Solved (Click). Opening Door.");
                 this.maze.openDoor(object);
             });
         }
