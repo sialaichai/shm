@@ -30,6 +30,25 @@ html {
     z-index: 0;
 }
 
+#start-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    
+    /* This 3-line combo guarantees perfect centering */
+    display: flex;
+    flex-direction: column; /* Stacks title and button vertically */
+    justify-content: center; /* Centers vertically */
+    align-items: center;     /* Centers horizontally */
+    
+    background: rgba(0, 0, 0, 0.85); /* Dark overlay */
+    z-index: 100;
+    color: white;
+    text-align: center;
+}
+
 #ui-layer {
     position: absolute;
     top: 0;
