@@ -30,74 +30,88 @@ export class Maze {
 
     createSurfaceTexture(bgColor, gridColor) {
         const canvas = document.createElement('canvas');
-        canvas.width = 1024;
-        canvas.height = 1024;
+        // High resolution to cover the entire map without blur
+        canvas.width = 2048;
+        canvas.height = 2048;
         const ctx = canvas.getContext('2d');
 
         // Background
         ctx.fillStyle = bgColor;
-        ctx.fillRect(0, 0, 1024, 1024);
+        ctx.fillRect(0, 0, 2048, 2048);
 
-        // Grid
+        // --- GRID LOGIC ---
+        // The maze is 11x11 units. We want one tile per unit.
+        const tileCount = 11; 
+        const tileSize = 2048 / tileCount; // approx 186px per tile
+
+        // Draw Grid Lines
         ctx.strokeStyle = gridColor;
-        ctx.lineWidth = 4;
-        for (let i = 0; i <= 1024; i += 256) { 
-            ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(1024, i); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 1024); ctx.stroke();
+        ctx.lineWidth = 3;
+        for (let i = 0; i <= tileCount; i++) {
+            const pos = i * tileSize;
+            ctx.beginPath(); ctx.moveTo(0, pos); ctx.lineTo(2048, pos); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(pos, 0); ctx.lineTo(pos, 2048); ctx.stroke();
         }
 
         const graphs = ['spring', 'pendulum', 'energy_time', 'energy_disp', 'acc_disp', 'vel_disp'];
         const equations = ['a = -ω²x', 'x = x₀sin(ωt)', 'v = ±ω√(x₀²-x²)', 'T = 2π√(m/k)', 'E = ½mω²x₀²'];
 
-        for (let row = 0; row < 2; row++) {
-            for (let col = 0; col < 2; col++) {
-                if (Math.random() > 0.5) continue; 
+        // --- UNIQUE GENERATION ---
+        // Instead of repeating a small image, we draw the WHOLE map here.
+        for (let row = 0; row < tileCount; row++) {
+            for (let col = 0; col < tileCount; col++) {
+                
+                // 40% chance to have a drawing in this specific room
+                if (Math.random() > 0.4) continue; 
 
-                const cx = col * 512 + 256; 
-                const cy = row * 512 + 256;
+                const cx = col * tileSize + (tileSize / 2); 
+                const cy = row * tileSize + (tileSize / 2);
 
                 ctx.save();
+                
+                // Random rotation (0, 90, 180, 270)
                 const angle = Math.floor(Math.random() * 4) * (Math.PI / 2);
                 ctx.translate(cx, cy);
                 ctx.rotate(angle);
                 ctx.translate(-cx, -cy);
 
-                const w = 300;
-                const h = 300;
+                // Draw size (fit within the tile)
+                const w = tileSize * 0.7;
+                const h = tileSize * 0.7;
                 const x0 = cx - w/2; 
                 const y0 = cy - h/2;
 
                 if (Math.random() > 0.5) {
-                    // Draw Graph
+                    // --- DRAW GRAPH ---
                     const type = graphs[Math.floor(Math.random() * graphs.length)];
                     
-                    ctx.fillStyle = 'rgba(0,0,0,0.8)'; 
-                    ctx.fillRect(x0 - 20, y0 - 20, w + 40, h + 40);
+                    ctx.fillStyle = 'rgba(0,0,0,0.6)'; 
+                    ctx.fillRect(x0 - 10, y0 - 10, w + 20, h + 20);
                     
                     ctx.strokeStyle = '#ffffff'; 
-                    ctx.lineWidth = 6; 
+                    ctx.lineWidth = 4; 
                     ctx.strokeRect(x0, y0, w, h);
 
                     const setNeon = (color) => {
                         ctx.strokeStyle = color;
                         ctx.shadowColor = color;
-                        ctx.shadowBlur = 40; 
-                        ctx.lineWidth = 12;  
+                        ctx.shadowBlur = 20; 
+                        ctx.lineWidth = 6;  
                         ctx.lineCap = 'round';
                     };
 
                     if (type === 'spring') {
                         setNeon('#00ff66'); ctx.beginPath();
-                        let sy = y0 + 50;
+                        let sy = y0 + (h*0.2);
                         ctx.moveTo(cx, y0);
-                        for (let i = 0; i < 12; i++) ctx.lineTo(cx + (i % 2 === 0 ? 40 : -40), sy += 20);
+                        for (let i = 0; i < 8; i++) ctx.lineTo(cx + (i % 2 === 0 ? 15 : -15), sy += (h*0.08));
                         ctx.stroke();
-                        ctx.fillStyle = '#00ff66'; ctx.fillRect(cx - 30, sy, 60, 60);
+                        ctx.fillStyle = '#00ff66'; ctx.fillRect(cx - 15, sy, 30, 30);
                     }
                     else if (type === 'pendulum') {
                         setNeon('#ff00ff'); ctx.beginPath();
-                        ctx.moveTo(cx, y0); ctx.lineTo(cx + 80, y0 + 200); ctx.stroke();
-                        ctx.beginPath(); ctx.arc(cx + 80, y0 + 200, 30, 0, Math.PI * 2);
+                        ctx.moveTo(cx, y0); ctx.lineTo(cx + 40, y0 + h*0.8); ctx.stroke();
+                        ctx.beginPath(); ctx.arc(cx + 40, y0 + h*0.8, 15, 0, Math.PI * 2);
                         ctx.fillStyle = '#ff00ff'; ctx.fill();
                     }
                     else {
@@ -105,12 +119,13 @@ export class Maze {
                         ctx.ellipse(cx, cy, w * 0.4, h * 0.3, 0, 0, Math.PI * 2); ctx.stroke();
                     }
                 } else {
-                    // Draw Equation
+                    // --- DRAW EQUATION ---
                     const eq = equations[Math.floor(Math.random() * equations.length)];
                     ctx.fillStyle = '#ffffff';
                     ctx.shadowColor = '#00ecff';
-                    ctx.shadowBlur = 30;
-                    ctx.font = `bold 80px "Courier New", monospace`; 
+                    ctx.shadowBlur = 15;
+                    // Auto-scale font based on tile size
+                    ctx.font = `bold ${Math.floor(tileSize * 0.25)}px "Courier New", monospace`; 
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillText(eq, cx, cy);
@@ -120,12 +135,12 @@ export class Maze {
         }
 
         const texture = new THREE.CanvasTexture(canvas);
-        texture.wrapS = THREE.RepeatWrapping;
-        texture.wrapT = THREE.RepeatWrapping;
         
-        // --- FIX IS HERE: Increased from 4 to 10 ---
-        texture.repeat.set(10, 10); 
-        // -------------------------------------------
+        // CRITICAL CHANGE: DO NOT REPEAT
+        // We want 1 texture to cover the whole map 1:1
+        texture.wrapS = THREE.ClampToEdgeWrapping;
+        texture.wrapT = THREE.ClampToEdgeWrapping;
+        texture.repeat.set(1, 1); 
         
         texture.anisotropy = 16; 
         return texture;
@@ -164,7 +179,7 @@ export class Maze {
         const wallGeo = new THREE.BoxGeometry(this.cellSize, 4, this.cellSize);
         const wallMat = new THREE.MeshLambertMaterial({ color: 0xffffff, map: wallTex });
 
-        // Floor (Dark + Neon Ready)
+        // Floor (Dark + Neon + Unique Mapping)
         const floorTex = this.createSurfaceTexture('#1a1a24', '#333344');
         const floorGeo = new THREE.PlaneGeometry(this.grid[0].length * this.cellSize, this.grid.length * this.cellSize);
         const floorMat = new THREE.MeshStandardMaterial({ 
@@ -251,7 +266,6 @@ export class Maze {
     }
 
     createDoor(x, z, row, col) {
-        // Rotation Check
         let isHorizontal = false;
         if (col > 0 && col < this.grid[0].length - 1) {
             if (this.grid[row][col-1] !== 1 && this.grid[row][col+1] !== 1) {
@@ -267,12 +281,10 @@ export class Maze {
         const door = new THREE.Mesh(geo, mat);
         door.position.set(x, 0, z);
 
-        // Add to scene first
         this.scene.add(door);
         this.doors.push(door);
         this.colliders.push(new THREE.Box3().setFromObject(door));
 
-        // Register
         const qID = this.questionCounter++; 
         const level = 3; 
         
