@@ -9,17 +9,25 @@ export class Interaction {
 
         this.raycaster = new THREE.Raycaster();
         this.center = new THREE.Vector2(0, 0); // Center of screen
-
+        // Create the Raycaster and direction vector ONCE to save memory
+        this.workingVector = new THREE.Vector3(); // Reusable vector
         document.addEventListener('click', this.onClick.bind(this));
     }
 
     check() {
+        if (!this.camera || !this.ui) return;
+        // FIX: Ensure vector exists before filling it
+        this.camera.getWorldDirection(this.workingVector);
         const playerPos = this.camera.position;
         const playerDir = new THREE.Vector3();
         this.camera.getWorldDirection(playerDir);
+        // Update raycaster
+        this.raycaster.set(playerPos, this.workingVector);
+        this.raycaster.far = 4; // Interaction range (3-4 units is good)
 
-        const raycaster = new THREE.Raycaster(playerPos, playerDir, 0, 3); // 3 units reach
-        const intersects = raycaster.intersectObjects(this.scene.children);
+        //const intersects = this.raycaster.intersectObjects(this.scene.children);
+        //const raycaster = new THREE.Raycaster(playerPos, playerDir, 0, 3); // 3 units reach
+        //const intersects = raycaster.intersectObjects(this.scene.children);
 
         if (intersects.length > 0) {
             const object = intersects[0].object;
