@@ -278,23 +278,29 @@ export class Maze {
         const door = new THREE.Mesh(geo, mat);
         door.position.set(x, 0, z);
 
-        // --- ID & REGISTRATION ---
-        const qID = this.questionCounter++; // GENERATE ID
+        // 1. ADD TO SCENE FIRST (Safety Check)
+        this.scene.add(door);
+        this.doors.push(door);
+        this.colliders.push(new THREE.Box3().setFromObject(door));
+
+        // 2. SETUP DATA
+        const qID = this.questionCounter++; 
         const level = 3; 
         
         door.userData = { 
             type: 'door', 
-            id: qID, // STORE ID
+            id: qID, 
             level: level 
         };
 
-        // TELL UI TO REGISTER THIS ID
-        if (this.ui) this.ui.registerQuestion(qID, level);
-        // -------------------------
-
-        this.scene.add(door);
-        this.doors.push(door);
-        this.colliders.push(new THREE.Box3().setFromObject(door));
+        // 3. REGISTER WITH UI (If this crashes, the door still blocks the player)
+        if (this.ui && typeof this.ui.registerQuestion === 'function') {
+            try {
+                this.ui.registerQuestion(qID, level);
+            } catch (e) {
+                console.warn("UI Registration Failed for Door:", e);
+            }
+        }
     }
 
     removeToken(token) {
