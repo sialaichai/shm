@@ -14,21 +14,31 @@ export class Interaction {
     }
 
     check() {
-        //if (!this.ui.isGameActive) return;
-        // Inside interaction.js -> check()
-        if (object.userData.type === 'token') {
-            // PASS THE ID (object.userData.id)
-            this.ui.showQuestion(object.userData.id, () => {
-                this.maze.removeToken(object);
-            });
-        } 
-        else if (object.userData.type === 'door') {
-            // PASS THE ID (object.userData.id)
-            this.ui.showQuestion(object.userData.id, () => {
-                this.maze.openDoor(object);
-            });
+        const playerPos = this.camera.position;
+        const playerDir = new THREE.Vector3();
+        this.camera.getWorldDirection(playerDir);
+
+        const raycaster = new THREE.Raycaster(playerPos, playerDir, 0, 3); // 3 units reach
+        const intersects = raycaster.intersectObjects(this.scene.children);
+
+        if (intersects.length > 0) {
+            const object = intersects[0].object;
+
+            // --- UPDATED LOGIC HERE ---
+            if (object.userData.type === 'token') {
+                // Pass the unique ID (userData.id) so UI remembers if we failed it before
+                this.ui.showQuestion(object.userData.id, () => {
+                    this.maze.removeToken(object);
+                });
+            } 
+            else if (object.userData.type === 'door') {
+                // Pass the unique ID for doors too
+                this.ui.showQuestion(object.userData.id, () => {
+                    this.maze.openDoor(object);
+                });
+            }
+            // --------------------------
         }
-        // Optional: Highlight object under cursor
     }
 
     onClick() {
