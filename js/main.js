@@ -49,8 +49,7 @@ class Game {
         // 1. GENERATE MAZE
         this.maze.generate(); 
 
-        // 2. --- FIX: MOVE PLAYER TO SAFE START POSITION ---
-        // This stops you from being "Upside Down" or stuck inside a wall
+        // 2. MOVE PLAYER TO SAFE START POSITION
         const spawn = this.maze.getSpawnPosition();
         this.player.setPosition(spawn.x, spawn.y, spawn.z);
 
@@ -67,7 +66,11 @@ class Game {
         requestAnimationFrame(this.animate.bind(this));
 
         if (this.ui.isGameActive) {
-            const delta = this.clock.getDelta();
+            // --- FIX 2: DELTA CAP (PREVENTS TELEPORTING THROUGH WALLS) ---
+            // If delta is huge (lag), cap it at 0.1s so physics don't break
+            const delta = Math.min(this.clock.getDelta(), 0.1);
+            // -------------------------------------------------------------
+
             this.player.update(delta, this.maze.colliders);
             this.interaction.check();
         }
