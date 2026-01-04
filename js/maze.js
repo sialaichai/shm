@@ -53,7 +53,7 @@ export class Maze {
         }
 
         const graphs = ['spring', 'pendulum', 'energy_time', 'energy_disp', 'acc_disp', 'vel_disp'];
-        const equations = ['a = -ω²x', 'x = x₀sin(ωt)', 'v = ±ω√(x₀²-x²)', 'T = 2π√(m/k)', 'E = ½mω²x₀²'];
+        const equations = ['a = -ω²x', 'x = x₀sin(ωt)', 'v = v₀cos(ωt)','v = ±ω√(x₀²-x²)', 'T = 2π√(m/k)','T = 2π√(L/g)', 'E = ½mω²x₀²','KE = ½mω²(x₀²-x²)','PE = ½mω²x²'];
 
         // --- UNIQUE GENERATION ---
         for (let row = 0; row < tileCount; row++) {
