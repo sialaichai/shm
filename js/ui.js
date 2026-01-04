@@ -2,19 +2,18 @@ import { getQuestion } from './questions.js';
 
 export class UI {
     constructor(game, audioManager) {
-        console.log("UI: Dynamic Scoring Loaded");
+        console.log("UI: Robust Scoring Loaded");
         this.game = game;
         this.audioManager = audioManager;
         
-        // --- DYNAMIC SCORING STORAGE ---
+        // --- SCORING MEMORY ---
         this.score = 0;
         this.maxScore = 0;
         this.totalQuestions = 0;
         this.questionsCompleted = 0;
         
-        // Stores status of every specific orb: ID -> { level, isFailed, isSolved }
+        // Map: ID -> { level, isFailed, isSolved }
         this.questionMemory = new Map(); 
-        // -------------------------------
 
         this.elements = {
             hud: document.getElementById('hud'),
@@ -37,17 +36,16 @@ export class UI {
         this.updateHUD(); 
     }
 
-    // --- CALLED BY MAZE.JS ---
+    // Called by Maze to set up the scoreboard
     registerQuestion(id, level) {
-        // Only register if we haven't seen this ID before
         if (!this.questionMemory.has(id)) {
+            console.log(`UI: Registered Question ${id} (Level ${level})`);
             this.questionMemory.set(id, { 
                 level: level, 
                 isFailed: false, 
                 isSolved: false 
             });
 
-            // Update Totals
             this.maxScore += level;
             this.totalQuestions++;
             this.updateHUD();
@@ -73,8 +71,6 @@ export class UI {
         `;
     }
 
-    // --- CALLED BY INTERACTION.JS ---
-    // Now accepts 'id' to track specific question history
     showQuestion(id, onSuccess) {
         this.isGameActive = false;
         document.exitPointerLock();
@@ -82,18 +78,25 @@ export class UI {
         if (this.elements.crosshair) this.elements.crosshair.style.display = 'none';
         if (this.audioManager) this.audioManager.setMode('QUIET');
 
-        // RETRIEVE MEMORY
-        const memory = this.questionMemory.get(id);
+        // --- SAFETY FIX: Ensure Memory Exists ---
+        let memory = this.questionMemory.get(id);
         
-        // Safety fallback if ID missing
-        const level = memory ? memory.level : 1;
-        const isAlreadyFailed = memory ? memory.isFailed : false;
+        if (!memory) {
+            console.warn(`UI: Warning - ID ${id} was not registered! creating memory now.`);
+            // Create a default memory entry so we can still track failures
+            memory = { level: 1, isFailed: false, isSolved: false }; 
+            this.questionMemory.set(id, memory);
+        }
+        // ----------------------------------------
+
+        const level = memory.level;
+        const isAlreadyFailed = memory.isFailed;
 
         const q = getQuestion(level);
         
         this.elements.category.textContent = q.category;
         
-        // Visual warning if failed
+        // Visual Warning
         if (isAlreadyFailed) {
             this.elements.text.textContent = `[0 Points Possible] ${q.question}`;
             this.elements.text.style.color = '#ff9999';
@@ -118,12 +121,17 @@ export class UI {
                 e.stopPropagation();
 
                 if (opt.correct) {
-                    // --- CORRECT ---
-                    const points = isAlreadyFailed ? 0 : level;
+                    // --- CORRECT ANSWER ---
+                    
+                    // CHECK MEMORY AGAIN
+                    const currentMemory = this.questionMemory.get(id);
+                    const points = (currentMemory && currentMemory.isFailed) ? 0 : level;
                     
                     if (points > 0) {
                         this.score += points;
-                        if (memory) memory.isSolved = true; 
+                        if (currentMemory) currentMemory.isSolved = true; 
+                    } else {
+                        console.log("UI: Correct answer, but 0 points awarded due to previous failure.");
                     }
                     
                     this.questionsCompleted++; 
@@ -135,7 +143,6 @@ export class UI {
                     this.elements.feedback.textContent = `${q.feedback} (+${points} pts)`;
                     this.elements.feedback.style.color = points > 0 ? '#00ff66' : '#ffff00';
                     
-                    // MathJax render
                     if (window.MathJax && window.MathJax.typesetPromise) {
                         window.MathJax.typesetPromise([this.elements.feedback]);
                     }
@@ -151,8 +158,14 @@ export class UI {
                     }, 2500); 
 
                 } else {
-                    // --- WRONG ---
-                    if (memory) memory.isFailed = true;
+                    // --- WRONG ANSWER ---
+                    
+                    // SAVE FAILURE TO MEMORY
+                    const currentMemory = this.questionMemory.get(id);
+                    if (currentMemory) {
+                        currentMemory.isFailed = true;
+                        console.log(`UI: Question ${id} marked as FAILED.`);
+                    }
 
                     if (this.audioManager) this.audioManager.playFail();
 
