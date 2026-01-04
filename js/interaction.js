@@ -1,84 +1,68 @@
 import * as THREE from 'three';
 
 export class Interaction {
-    constructor(scene, camera, ui, maze) {
-        this.scene = scene;
-        this.camera = camera;
-        this.ui = ui;
-        this.maze = maze;
+  constructor(scene, camera, ui, maze) {
+    this.scene = scene;
+    this.camera = camera;
+    this.ui = ui;
+    this.maze = maze;
+    this.raycaster = new THREE.Raycaster();
+    this.center = new THREE.Vector2(0, 0); // Center of screen
+    this.workingVector = new THREE.Vector3(); // Reusable vector
 
-        this.raycaster = new THREE.Raycaster();
-        this.center = new THREE.Vector2(0, 0); // Center of screen
-        
-        // Create the Raycaster and direction vector ONCE to save memory
-        this.workingVector = new THREE.Vector3(); // Reusable vector
-        document.addEventListener('click', this.onClick.bind(this));
+    document.addEventListener('click', this.onClick.bind(this));
+  }
+
+  check() {
+    if (!this.camera || !this.ui || !this.ui.isGameActive) return;
+
+    const playerPos = this.camera.position.clone();
+    this.camera.getWorldDirection(this.workingVector);
+    this.raycaster.set(playerPos, this.workingVector);
+    this.raycaster.far = 4;
+
+    // Intersect only with tokens and doors (for performance and correctness)
+    const interactables = [...this.maze.tokens, ...this.maze.doors];
+    const intersects = this.raycaster.intersectObjects(interactables);
+
+    if (intersects.length > 0) {
+      const object = intersects[0].object;
+      this.handleInteraction(object);
+    }
+  }
+
+  onClick() {
+    if (!this.ui.isGameActive) return;
+
+    if (document.pointerLockElement !== document.body) {
+      document.body.requestPointerLock();
+      return;
     }
 
-    check() {
-        if (!this.camera || !this.ui) return;
-        
-        // Ensure vector exists before filling it
-        this.camera.getWorldDirection(this.workingVector);
-        
-        const playerPos = this.camera.position;
-        
-        // Update raycaster
-        this.raycaster.set(playerPos, this.workingVector);
-        this.raycaster.far = 4; // Interaction range
+    this.raycaster.setFromCamera(this.center, this.camera);
+    const interactables = [...this.maze.tokens, ...this.maze.doors];
+    const intersects = this.raycaster.intersectObjects(interactables);
 
-        const intersects = this.raycaster.intersectObjects(this.scene.children);
-
-        if (intersects.length > 0) {
-            const object = intersects[0].object;
-
-            if (object.userData.type === 'token') {
-                // Pass the unique ID (userData.id)
-                this.ui.showQuestion(object.userData.id, () => {
-                    this.maze.removeToken(object);
-                });
-            } 
-            else if (object.userData.type === 'door') {
-                // Pass the unique ID for doors too
-                this.ui.showQuestion(object.userData.id, () => {
-                    this.maze.openDoor(object);
-                });
-            }
-        }
+    if (intersects.length > 0) {
+      const object = intersects[0].object;
+      this.handleInteraction(object);
     }
+  }
 
-    onClick() {
-        if (!this.ui.isGameActive) return;
-        if (document.pointerLockElement !== document.body) {
-            document.body.requestPointerLock();
-            return;
-        }
+  handleInteraction(object) {
+    const { type, id } = object.userData;
 
-        this.raycaster.setFromCamera(this.center, this.camera);
-
-        // Intersect with Tokens and Doors from Maze
-        const interactables = [...this.maze.tokens, ...this.maze.doors];
-        const intersects = this.raycaster.intersectObjects(interactables);
-
-        if (intersects.length > 0) {
-            const object = intersects[0].object;
-            this.handleInteraction(object);
-        }
+    if (type === 'token') {
+      // ✅ PASS ID (not level) so UI can track per-question attempts
+      this.ui.showQuestion(id, () => {
+        this.maze.removeToken(object);
+        // ❌ DO NOT add score here — scoring is handled by UI based on first attempt
+      });
+    } else if (type === 'door') {
+      // ✅ Same for doors
+      this.ui.showQuestion(id, () => {
+        this.maze.openDoor(object);
+      });
     }
-
-    handleInteraction(object) {
-        // --- FIXED LOGIC ---
-        // 1. Pass userData.id (NOT userData.level)
-        // 2. Do NOT call this.ui.addScore() manually. The UI class handles it.
-        
-        if (object.userData.type === 'token') {
-            this.ui.showQuestion(object.userData.id, () => {
-                this.maze.removeToken(object);
-            });
-        } else if (object.userData.type === 'door') {
-            this.ui.showQuestion(object.userData.id, () => {
-                this.maze.openDoor(object);
-            });
-        }
-    }
+  }
 }
