@@ -45,43 +45,159 @@ export class Maze {
         return new THREE.Vector3(4, 2, 4); // Fallback
     }
 
-    createSurfaceTexture(bgColor, gridColor) {
+createSurfaceTexture(bgColor, gridColor) {
         const canvas = document.createElement('canvas');
-        canvas.width = 2048; canvas.height = 2048;
+        canvas.width = 2048;
+        canvas.height = 2048;
         const ctx = canvas.getContext('2d');
 
-        ctx.fillStyle = bgColor; ctx.fillRect(0, 0, 2048, 2048);
-        const tileCount = 22; const tileSize = 2048 / tileCount; 
+        // 1. Background
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, 2048, 2048);
 
-        ctx.strokeStyle = gridColor; ctx.lineWidth = 2; 
+        const tileCount = 22; 
+        const tileSize = 2048 / tileCount; 
+
+        // 2. Grid Lines
+        ctx.strokeStyle = gridColor;
+        ctx.lineWidth = 2; 
         for (let i = 0; i <= tileCount; i++) {
             const pos = i * tileSize;
             ctx.beginPath(); ctx.moveTo(0, pos); ctx.lineTo(2048, pos); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(pos, 0); ctx.lineTo(pos, 2048); ctx.stroke();
         }
 
-        const graphs = ['spring', 'pendulum', 'energy_time', 'energy_disp', 'acc_disp', 'vel_disp'];
-        const equations = ['a = -ω²x', 'x = x₀sin(ωt)', 'v = ±ω√(x₀²-x²)', 'T = 2π√(m/k)', 'E = ½mω²x₀²'];
+        // --- UPDATED LIST OF GRAPHS ---
+        const graphs = ['spring', 'pendulum', 'damped', 'energy', 'resonance', 'shm_acc', 'waves'];
+        
+        // Updated Equations List
+        const equations = [
+            'a = -ω²x', 
+            'x = A e^(-bt/2m)', 
+            'E = K + U', 
+            'U = ½kx²', 
+            'ω = √(k/m)',
+            'T = 2π√(L/g)'
+        ];
 
         for (let row = 0; row < tileCount; row++) {
             for (let col = 0; col < tileCount; col++) {
                 if (Math.random() > 0.3) continue; 
+
                 const cx = col * tileSize + (tileSize / 2); 
                 const cy = row * tileSize + (tileSize / 2);
+
                 ctx.save();
-                ctx.translate(cx, cy); ctx.rotate(Math.floor(Math.random() * 4) * (Math.PI / 2)); ctx.translate(-cx, -cy);
-                const w = tileSize * 0.7; const h = tileSize * 0.7; const x0 = cx - w/2; const y0 = cy - h/2;
+                const angle = Math.floor(Math.random() * 4) * (Math.PI / 2);
+                ctx.translate(cx, cy);
+                ctx.rotate(angle);
+                ctx.translate(-cx, -cy);
+
+                const w = tileSize * 0.7; 
+                const h = tileSize * 0.7;
+                const x0 = cx - w/2; 
+                const y0 = cy - h/2;
 
                 if (Math.random() > 0.5) {
                     const type = graphs[Math.floor(Math.random() * graphs.length)];
-                    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(x0 - 5, y0 - 5, w + 10, h + 10); 
-                    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.strokeRect(x0, y0, w, h);
-                    const setNeon = (color) => { ctx.strokeStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 10; ctx.lineWidth = 4; ctx.lineCap = 'round'; };
+                    
+                    // Graph Background
+                    ctx.fillStyle = 'rgba(0,0,0,0.6)'; 
+                    ctx.fillRect(x0 - 5, y0 - 5, w + 10, h + 10); 
+                    
+                    // Axes
+                    ctx.strokeStyle = '#ffffff'; 
+                    ctx.lineWidth = 3; 
+                    ctx.strokeRect(x0, y0, w, h); // Draw Box Frame
+                    
+                    // Helper to make lines glow
+                    const setNeon = (color) => { 
+                        ctx.strokeStyle = color; 
+                        ctx.shadowColor = color; 
+                        ctx.shadowBlur = 10; 
+                        ctx.lineWidth = 4; 
+                        ctx.lineCap = 'round'; 
+                    };
 
-                    if (type === 'spring') { setNeon('#00ff66'); ctx.beginPath(); let sy = y0 + (h*0.2); ctx.moveTo(cx, y0); for (let i = 0; i < 8; i++) ctx.lineTo(cx + (i % 2 === 0 ? 10 : -10), sy += (h*0.08)); ctx.stroke(); } 
-                    else if (type === 'pendulum') { setNeon('#ff00ff'); ctx.beginPath(); ctx.moveTo(cx, y0); ctx.lineTo(cx + 20, y0 + h*0.8); ctx.stroke(); ctx.beginPath(); ctx.arc(cx + 20, y0 + h*0.8, 10, 0, Math.PI * 2); ctx.fillStyle = '#ff00ff'; ctx.fill(); } 
-                    else { setNeon('#00ecff'); ctx.beginPath(); ctx.ellipse(cx, cy, w * 0.4, h * 0.3, 0, 0, Math.PI * 2); ctx.stroke(); }
+                    // --- DRAWING LOGIC ---
+
+                    if (type === 'spring') {
+                        setNeon('#00ff66'); ctx.beginPath(); 
+                        let sy = y0 + (h*0.2); 
+                        ctx.moveTo(cx, y0); 
+                        for (let i = 0; i < 8; i++) ctx.lineTo(cx + (i % 2 === 0 ? 10 : -10), sy += (h*0.08)); 
+                        ctx.stroke(); ctx.fillStyle = '#00ff66'; ctx.fillRect(cx - 10, sy, 20, 20);
+                    } 
+                    else if (type === 'pendulum') {
+                        setNeon('#ff00ff'); ctx.beginPath(); 
+                        ctx.moveTo(cx, y0); ctx.lineTo(cx + 20, y0 + h*0.8); ctx.stroke(); 
+                        ctx.beginPath(); ctx.arc(cx + 20, y0 + h*0.8, 10, 0, Math.PI * 2); ctx.fillStyle = '#ff00ff'; ctx.fill(); 
+                    } 
+                    else if (type === 'damped') {
+                        // Decaying Sine Wave
+                        setNeon('#ff3333'); ctx.beginPath();
+                        ctx.moveTo(x0, cy);
+                        for (let i = 0; i <= w; i+=2) {
+                            // Math: e^(-x) * sin(x)
+                            const decay = Math.exp(-3 * (i/w));
+                            const osc = Math.sin(i * 0.1);
+                            const plotY = cy - (decay * osc * (h/2));
+                            ctx.lineTo(x0 + i, plotY);
+                        }
+                        ctx.stroke();
+                    }
+                    else if (type === 'energy') {
+                        // PE and KE vs Displacement
+                        // 1. PE (Parabola Up) - Cyan
+                        setNeon('#00ecff'); ctx.beginPath();
+                        for(let i = 0; i <= w; i+=2) {
+                            let xNorm = (i - w/2) / (w/2); // -1 to 1
+                            let yVal = xNorm * xNorm; // x^2
+                            ctx.lineTo(x0 + i, (y0 + h) - (yVal * h * 0.9));
+                        }
+                        ctx.stroke();
+
+                        // 2. KE (Parabola Down) - Yellow
+                        setNeon('#ffff00'); ctx.beginPath();
+                        for(let i = 0; i <= w; i+=2) {
+                            let xNorm = (i - w/2) / (w/2); 
+                            let yVal = 1 - (xNorm * xNorm); // 1 - x^2
+                            ctx.lineTo(x0 + i, (y0 + h) - (yVal * h * 0.9));
+                        }
+                        ctx.stroke();
+                    }
+                    else if (type === 'resonance') {
+                        // Amplitude vs Frequency (Bell Curve)
+                        setNeon('#ff9900'); ctx.beginPath();
+                        for(let i = 0; i <= w; i+=2) {
+                            let xNorm = (i - w/2) / (w/6); 
+                            // Lorentzian-like function: 1 / (1 + x^2)
+                            let yVal = 1 / (1 + xNorm*xNorm); 
+                            ctx.lineTo(x0 + i, (y0 + h) - (yVal * h * 0.9));
+                        }
+                        ctx.stroke();
+                    }
+                    else if (type === 'shm_acc') {
+                        // Acceleration vs Displacement (a = -x)
+                        // Simple diagonal line with negative slope
+                        setNeon('#ff0055'); ctx.beginPath();
+                        ctx.moveTo(x0, y0);       // Top Left
+                        ctx.lineTo(x0 + w, y0 + h); // Bottom Right
+                        ctx.stroke();
+                    }
+                    else if (type === 'waves') {
+                        // Sine (Green) and Cosine (Blue)
+                        setNeon('#00ff00'); ctx.beginPath();
+                        for(let i = 0; i <= w; i+=2) ctx.lineTo(x0 + i, cy - Math.sin(i*0.05)*(h*0.3));
+                        ctx.stroke();
+
+                        setNeon('#0088ff'); ctx.beginPath();
+                        for(let i = 0; i <= w; i+=2) ctx.lineTo(x0 + i, cy - Math.cos(i*0.05)*(h*0.3));
+                        ctx.stroke();
+                    }
+
                 } else {
+                    // Equations
                     const eq = equations[Math.floor(Math.random() * equations.length)];
                     ctx.fillStyle = '#ffffff'; ctx.shadowColor = '#00ecff'; ctx.shadowBlur = 10;
                     ctx.font = `bold ${Math.floor(tileSize * 0.18)}px "Courier New", monospace`; 
