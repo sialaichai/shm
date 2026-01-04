@@ -1,18 +1,18 @@
 import * as THREE from 'three';
 
 export class Maze {
-    // 1. ACCEPT UI IN CONSTRUCTOR
+    // 1. ACCEPT UI HERE
     constructor(scene, ui) {
         this.scene = scene;
-        this.ui = ui; // Save UI to register questions
+        this.ui = ui; // Save UI reference
         this.width = 10;
         this.depth = 10;
         this.cellSize = 4;
         this.colliders = []; 
         this.tokens = [];
         this.doors = [];
-        this.questionCounter = 0; // Unique ID for every question
-
+        this.questionCounter = 0; // The ID Counter
+        
         // Compact Grid (11x11)
         this.grid = [
             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
@@ -71,7 +71,6 @@ export class Maze {
                 if (Math.random() > 0.5) {
                     const type = graphs[Math.floor(Math.random() * graphs.length)];
                     ctx.beginPath(); ctx.rect(x0, y0, w, h); ctx.clip();
-
                     ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fill();
                     ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.strokeRect(x0, y0, w, h);
                     ctx.lineWidth = 4; 
@@ -153,8 +152,7 @@ export class Maze {
     }
 
     generate() {
-        // Reset ID Counter
-        this.questionCounter = 0;
+        this.questionCounter = 0; // Reset IDs
 
         // Walls
         const canvas = document.createElement('canvas');
@@ -210,7 +208,7 @@ export class Maze {
         ceil.position.set(floor.position.x, 2, floor.position.z);
         this.scene.add(ceil);
 
-        // Grid Generation
+        // Grid
         for (let row = 0; row < this.grid.length; row++) {
             for (let col = 0; col < this.grid[row].length; col++) {
                 const type = this.grid[row][col];
@@ -226,8 +224,8 @@ export class Maze {
                 else if (type === 2) { // Token
                     this.createToken(x, z);
                 } 
-                else if (type === 3) { // Door (Now passes row/col for rotation fix)
-                    this.createDoor(x, z, row, col);
+                else if (type === 3) { // Door
+                    this.createDoor(x, z);
                 } 
                 else if (type === 0 && Math.random() < 0.25) { // Random Token
                     this.createToken(x, z);
@@ -255,64 +253,44 @@ export class Maze {
         const token = new THREE.Mesh(geo, mat);
         token.position.set(x, 1, z);
 
-        // --- SCORING REGISTRATION ---
-        const qID = this.questionCounter++; // Unique ID
-        const level = Math.random() < 0.6 ? 1 : 2; // Level 1 or 2
+        // --- ID & REGISTRATION ---
+        const qID = this.questionCounter++; // GENERATE ID
+        const level = Math.random() < 0.6 ? 1 : 2; 
         
         token.userData = { 
             type: 'token', 
-            id: qID, // Save ID to token
+            id: qID, // STORE ID
             level: level, 
             rotSpeed: { x: Math.random() * 2, y: Math.random() * 2 } 
         };
 
-        // Tell UI about this new question!
+        // TELL UI TO REGISTER THIS ID
         if (this.ui) this.ui.registerQuestion(qID, level);
-        // -----------------------------
+        // -------------------------
 
         this.scene.add(token);
         this.tokens.push(token);
     }
 
-    createDoor(x, z, row, col) {
-        // --- DOOR ROTATION FIX ---
-        // Check neighbors to see if this is a Horizontal or Vertical hallway
-        // If neighbors (Left/Right) are NOT walls, it's a Horizontal Hallway -> Rotate 90
-        let isHorizontal = false;
-        
-        // Safety check boundaries
-        if (col > 0 && col < this.grid[0].length - 1) {
-            // If left is empty (0/2) AND right is empty (0/2), it's horizontal
-            if (this.grid[row][col-1] !== 1 && this.grid[row][col+1] !== 1) {
-                isHorizontal = true;
-            }
-        }
-
-        // Geometry: Default is wide on X (Good for Vertical Hallway)
-        // If Horizontal, we swap width/depth or rotate
-        const geo = new THREE.BoxGeometry(
-            isHorizontal ? 0.5 : this.cellSize, // Width
-            4,                                  // Height
-            isHorizontal ? this.cellSize : 0.5  // Depth
-        );
-        // -------------------------
-
+    createDoor(x, z) {
+        const geo = new THREE.BoxGeometry(this.cellSize, 4, 0.5);
         const mat = new THREE.MeshStandardMaterial({ color: 0xff00de, transparent: true, opacity: 0.8 });
         const door = new THREE.Mesh(geo, mat);
         door.position.set(x, 0, z);
 
-        // --- SCORING REGISTRATION ---
-        const qID = this.questionCounter++;
-        const level = 3; // Doors are hard
+        // --- ID & REGISTRATION ---
+        const qID = this.questionCounter++; // GENERATE ID
+        const level = 3; 
         
         door.userData = { 
             type: 'door', 
-            id: qID, // Save ID
+            id: qID, // STORE ID
             level: level 
         };
 
+        // TELL UI TO REGISTER THIS ID
         if (this.ui) this.ui.registerQuestion(qID, level);
-        // -----------------------------
+        // -------------------------
 
         this.scene.add(door);
         this.doors.push(door);
