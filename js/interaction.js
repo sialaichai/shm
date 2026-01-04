@@ -9,57 +9,62 @@ export class Interaction {
 
         this.raycaster = new THREE.Raycaster();
         this.center = new THREE.Vector2(0, 0); // Center of screen
-        // Create the Raycaster and direction vector ONCE to save memory
-        this.workingVector = new THREE.Vector3(); // Reusable vector
+        
+        // Reusable vector to prevent memory leaks
+        this.workingVector = new THREE.Vector3(); 
+        
+        // Click listener
         document.addEventListener('click', this.onClick.bind(this));
     }
 
+    // --- PROXIMITY CHECK (Runs every frame) ---
     check() {
         if (!this.camera || !this.ui) return;
-        // FIX: Ensure vector exists before filling it
-        this.camera.getWorldDirection(this.workingVector);
-        const playerPos = this.camera.position;
-        const playerDir = new THREE.Vector3();
-        this.camera.getWorldDirection(playerDir);
-        // Update raycaster
-        this.raycaster.set(playerPos, this.workingVector);
-        this.raycaster.far = 4; // Interaction range (3-4 units is good)
 
-        //const intersects = this.raycaster.intersectObjects(this.scene.children);
-        //const raycaster = new THREE.Raycaster(playerPos, playerDir, 0, 3); // 3 units reach
-        //const intersects = raycaster.intersectObjects(this.scene.children);
+        const playerPos = this.camera.position;
+        
+        // 1. Update Direction
+        this.camera.getWorldDirection(this.workingVector);
+
+        // 2. Raycast forward
+        this.raycaster.set(playerPos, this.workingVector);
+        this.raycaster.far = 2; // Trigger distance (2 units)
+
+        // 3. Find Intersections
+        const intersects = this.raycaster.intersectObjects(this.scene.children);
 
         if (intersects.length > 0) {
             const object = intersects[0].object;
-
-            // --- UPDATED LOGIC HERE ---
-            if (object.userData.type === 'token') {
-                // Pass the unique ID (userData.id) so UI remembers if we failed it before
+            
+            // If we hit a Token or Door, trigger it using its unique ID
+            if (object.userData.type === 'token' || object.userData.type === 'door') {
                 this.ui.showQuestion(object.userData.id, () => {
-                    this.maze.removeToken(object);
-                });
-            } 
-            else if (object.userData.type === 'door') {
-                // Pass the unique ID for doors too
-                this.ui.showQuestion(object.userData.id, () => {
-                    this.maze.openDoor(object);
+                    // Action on success
+                    if (object.userData.type === 'token') {
+                        this.maze.removeToken(object);
+                    } else {
+                        this.maze.openDoor(object);
+                    }
                 });
             }
-            // --------------------------
         }
     }
 
+    // --- CLICK CHECK (Runs only on mouse click) ---
     onClick() {
+        // Only allow clicking if game is active
         if (!this.ui.isGameActive) return;
+
+        // Pointer Lock Check (Optional: ensure user is "in" the game)
         if (document.pointerLockElement !== document.body) {
             document.body.requestPointerLock();
             return;
         }
 
         this.raycaster.setFromCamera(this.center, this.camera);
+        this.raycaster.far = 10; // Clicks can reach further than walking
 
-        // Intersect with Tokens and Doors from Maze
-        // Maze needs to expose these groups or arrays
+        // Get all interactables
         const interactables = [...this.maze.tokens, ...this.maze.doors];
         const intersects = this.raycaster.intersectObjects(interactables);
 
@@ -70,15 +75,16 @@ export class Interaction {
     }
 
     handleInteraction(object) {
+        // PASS UNIQUE ID (object.userData.id) -> NOT LEVEL
         if (object.userData.type === 'token') {
-            this.ui.showQuestion(object.userData.level, () => {
-                // On success
+            this.ui.showQuestion(object.userData.id, () => {
+                // UI handles scoring. We just remove the object.
                 this.maze.removeToken(object);
-                this.ui.addScore(10);
             });
-        } else if (object.userData.type === 'door') {
-            this.ui.showQuestion(object.userData.level, () => {
-                // On success
+        } 
+        else if (object.userData.type === 'door') {
+            this.ui.showQuestion(object.userData.id, () => {
+                // UI handles scoring. We just open the door.
                 this.maze.openDoor(object);
             });
         }
