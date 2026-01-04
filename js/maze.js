@@ -30,7 +30,6 @@ export class Maze {
 
     createSurfaceTexture(bgColor, gridColor) {
         const canvas = document.createElement('canvas');
-        // High resolution to cover the entire map without blur
         canvas.width = 2048;
         canvas.height = 2048;
         const ctx = canvas.getContext('2d');
@@ -40,11 +39,10 @@ export class Maze {
         ctx.fillRect(0, 0, 2048, 2048);
 
         // --- GRID LOGIC ---
-        // The maze is 11x11 units. We want one tile per unit.
         const tileCount = 11; 
-        const tileSize = 2048 / tileCount; // approx 186px per tile
+        const tileSize = 2048 / tileCount; // ~186px
 
-        // Draw Grid Lines
+        // Grid Lines
         ctx.strokeStyle = gridColor;
         ctx.lineWidth = 3;
         for (let i = 0; i <= tileCount; i++) {
@@ -57,11 +55,10 @@ export class Maze {
         const equations = ['a = -ω²x', 'x = x₀sin(ωt)', 'v = ±ω√(x₀²-x²)', 'T = 2π√(m/k)', 'E = ½mω²x₀²'];
 
         // --- UNIQUE GENERATION ---
-        // Instead of repeating a small image, we draw the WHOLE map here.
         for (let row = 0; row < tileCount; row++) {
             for (let col = 0; col < tileCount; col++) {
                 
-                // 40% chance to have a drawing in this specific room
+                // 40% chance to have a drawing
                 if (Math.random() > 0.4) continue; 
 
                 const cx = col * tileSize + (tileSize / 2); 
@@ -69,15 +66,14 @@ export class Maze {
 
                 ctx.save();
                 
-                // Random rotation (0, 90, 180, 270)
+                // Random rotation
                 const angle = Math.floor(Math.random() * 4) * (Math.PI / 2);
                 ctx.translate(cx, cy);
                 ctx.rotate(angle);
                 ctx.translate(-cx, -cy);
 
-                // Draw size (fit within the tile)
-                const w = tileSize * 0.7;
-                const h = tileSize * 0.7;
+                const w = tileSize * 0.6; // 60% of room width
+                const h = tileSize * 0.6;
                 const x0 = cx - w/2; 
                 const y0 = cy - h/2;
 
@@ -119,16 +115,19 @@ export class Maze {
                         ctx.ellipse(cx, cy, w * 0.4, h * 0.3, 0, 0, Math.PI * 2); ctx.stroke();
                     }
                 } else {
-                    // --- DRAW EQUATION ---
+                    // --- DRAW EQUATION (FIXED SIZE) ---
                     const eq = equations[Math.floor(Math.random() * equations.length)];
                     ctx.fillStyle = '#ffffff';
                     ctx.shadowColor = '#00ecff';
                     ctx.shadowBlur = 15;
-                    // Auto-scale font based on tile size
-                    ctx.font = `bold ${Math.floor(tileSize * 0.25)}px "Courier New", monospace`; 
+                    
+                    // Reduced font size (15% of room width instead of 25%)
+                    ctx.font = `bold ${Math.floor(tileSize * 0.15)}px "Courier New", monospace`; 
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
-                    ctx.fillText(eq, cx, cy);
+                    
+                    // CLAMP WIDTH: Text cannot be wider than 80% of the room
+                    ctx.fillText(eq, cx, cy, tileSize * 0.8);
                 }
                 ctx.restore();
             }
@@ -136,8 +135,7 @@ export class Maze {
 
         const texture = new THREE.CanvasTexture(canvas);
         
-        // CRITICAL CHANGE: DO NOT REPEAT
-        // We want 1 texture to cover the whole map 1:1
+        // UNIQUE MAPPING (Do not repeat)
         texture.wrapS = THREE.ClampToEdgeWrapping;
         texture.wrapT = THREE.ClampToEdgeWrapping;
         texture.repeat.set(1, 1); 
@@ -179,7 +177,7 @@ export class Maze {
         const wallGeo = new THREE.BoxGeometry(this.cellSize, 4, this.cellSize);
         const wallMat = new THREE.MeshLambertMaterial({ color: 0xffffff, map: wallTex });
 
-        // Floor (Dark + Neon + Unique Mapping)
+        // Floor
         const floorTex = this.createSurfaceTexture('#1a1a24', '#333344');
         const floorGeo = new THREE.PlaneGeometry(this.grid[0].length * this.cellSize, this.grid.length * this.cellSize);
         const floorMat = new THREE.MeshStandardMaterial({ 
