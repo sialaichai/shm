@@ -30,7 +30,6 @@ export class Maze {
 
     createSurfaceTexture(bgColor, gridColor) {
         const canvas = document.createElement('canvas');
-        // High Res for crisp text
         canvas.width = 1024;
         canvas.height = 1024;
         const ctx = canvas.getContext('2d');
@@ -39,7 +38,7 @@ export class Maze {
         ctx.fillStyle = bgColor;
         ctx.fillRect(0, 0, 1024, 1024);
 
-        // Grid (Thicker)
+        // Grid
         ctx.strokeStyle = gridColor;
         ctx.lineWidth = 4;
         for (let i = 0; i <= 1024; i += 256) { 
@@ -72,7 +71,6 @@ export class Maze {
                     // Draw Graph
                     const type = graphs[Math.floor(Math.random() * graphs.length)];
                     
-                    // Box Background
                     ctx.fillStyle = 'rgba(0,0,0,0.8)'; 
                     ctx.fillRect(x0 - 20, y0 - 20, w + 40, h + 40);
                     
@@ -107,7 +105,7 @@ export class Maze {
                         ctx.ellipse(cx, cy, w * 0.4, h * 0.3, 0, 0, Math.PI * 2); ctx.stroke();
                     }
                 } else {
-                    // Draw Equation (Giant Font)
+                    // Draw Equation
                     const eq = equations[Math.floor(Math.random() * equations.length)];
                     ctx.fillStyle = '#ffffff';
                     ctx.shadowColor = '#00ecff';
@@ -124,7 +122,11 @@ export class Maze {
         const texture = new THREE.CanvasTexture(canvas);
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(4, 4); 
+        
+        // --- FIX IS HERE: Increased from 4 to 10 ---
+        texture.repeat.set(10, 10); 
+        // -------------------------------------------
+        
         texture.anisotropy = 16; 
         return texture;
     }
@@ -204,7 +206,6 @@ export class Maze {
                     this.createToken(x, z);
                 } 
                 else if (type === 3) { // Door
-                    // PASS ROW/COL FOR ROTATION CHECK
                     this.createDoor(x, z, row, col);
                 } 
                 else if (type === 0 && Math.random() < 0.25) { 
@@ -250,9 +251,7 @@ export class Maze {
     }
 
     createDoor(x, z, row, col) {
-        // --- ROTATION FIX ---
-        // Check neighbors: If Left (col-1) and Right (col+1) are NOT walls,
-        // it implies a horizontal hallway. We must rotate the door.
+        // Rotation Check
         let isHorizontal = false;
         if (col > 0 && col < this.grid[0].length - 1) {
             if (this.grid[row][col-1] !== 1 && this.grid[row][col+1] !== 1) {
@@ -260,30 +259,25 @@ export class Maze {
             }
         }
 
-        // Standard: Wide (cellSize), Thin (0.5)
-        // Horizontal: Thin (0.5), Wide (cellSize)
         const width = isHorizontal ? 0.5 : this.cellSize;
         const depth = isHorizontal ? this.cellSize : 0.5;
 
         const geo = new THREE.BoxGeometry(width, 4, depth);
-        // ---------------------
-
         const mat = new THREE.MeshStandardMaterial({ color: 0xff00de, transparent: true, opacity: 0.8 });
         const door = new THREE.Mesh(geo, mat);
         door.position.set(x, 0, z);
 
-        // 1. ADD TO SCENE FIRST (Safety)
+        // Add to scene first
         this.scene.add(door);
         this.doors.push(door);
         this.colliders.push(new THREE.Box3().setFromObject(door));
 
-        // 2. REGISTER
+        // Register
         const qID = this.questionCounter++; 
         const level = 3; 
         
         door.userData = { type: 'door', id: qID, level: level };
 
-        // 3. SAFE UI CALL
         if (this.ui && typeof this.ui.registerQuestion === 'function') {
             try {
                 this.ui.registerQuestion(qID, level);
