@@ -17,7 +17,7 @@ export class Player {
         this.moveRight = false;
         this.canJump = false;
 
-        // Force Upright Camera
+        // Force Upright
         this.camera.up.set(0, 1, 0); 
         this.camera.rotation.set(0, 0, 0);
 
@@ -36,16 +36,13 @@ export class Player {
         return this.controls ? this.controls.getObject() : this.camera;
     }
 
-    // --- NEW: Helper to teleport player ---
     setPosition(x, y, z) {
         this.camera.position.set(x, y, z);
         this.velocity.set(0, 0, 0);
     }
 
     setupDesktopControls() {
-        console.log("Player: Desktop Controls Active");
         this.controls = new PointerLockControls(this.camera, document.body);
-
         const onKeyDown = (event) => {
             switch (event.code) {
                 case 'ArrowUp': case 'KeyW': this.moveForward = true; break;
@@ -55,7 +52,6 @@ export class Player {
                 case 'Space': if (this.canJump) { this.velocity.y += 15; this.canJump = false; } break;
             }
         };
-
         const onKeyUp = (event) => {
             switch (event.code) {
                 case 'ArrowUp': case 'KeyW': this.moveForward = false; break;
@@ -70,7 +66,6 @@ export class Player {
     }
 
     setupMobileControls() {
-        console.log("Player: Mobile Controls Active");
         const zone = document.getElementById('zone_joystick');
         const instructions = document.getElementById('mobile-instructions');
         if (zone) zone.style.display = 'block';
@@ -122,31 +117,30 @@ export class Player {
             inputX = Number(this.moveRight) - Number(this.moveLeft);
         }
 
-        // --- WORLD MOVEMENT (Prevents Flying on Mobile & Desktop) ---
         const camDir = new THREE.Vector3();
         this.camera.getWorldDirection(camDir);
-        camDir.y = 0; // Flatten the direction
-        camDir.normalize();
+        camDir.y = 0; camDir.normalize();
 
         const sideDir = new THREE.Vector3();
         sideDir.crossVectors(camDir, new THREE.Vector3(0, 1, 0)).normalize(); 
 
         const moveVec = new THREE.Vector3();
         moveVec.addScaledVector(camDir, inputZ);
-        moveVec.addScaledVector(sideDir, inputX); // Corrected: +inputX is Right
-        moveVec.normalize();
-
-        if (inputZ !== 0 || inputX !== 0) {
+        moveVec.addScaledVector(sideDir, inputX); 
+        
+        // --- CRITICAL FIX: PREVENT NAN (BLACK SCREEN) ---
+        // If length is 0 (no input), normalize() divides by zero -> NaN -> Crash
+        if (moveVec.lengthSq() > 0.001) {
+            moveVec.normalize();
             this.velocity.x += (moveVec.x * this.speed * 5 * delta); 
             this.velocity.z += (moveVec.z * this.speed * 5 * delta);
         }
+        // ------------------------------------------------
 
-        // Friction
         this.velocity.x -= this.velocity.x * 10.0 * delta;
         this.velocity.z -= this.velocity.z * 10.0 * delta;
         this.velocity.y -= this.gravity * delta; 
 
-        // Apply Collision
         const originalPos = this.camera.position.clone();
 
         // X Movement
