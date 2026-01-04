@@ -1,6 +1,4 @@
 import * as THREE from 'three';
-// Ensure PointerLockControls is available. 
-// If using a CDN or plain HTML, make sure the script is loaded in index.html
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js'; 
 
 export class Player {
@@ -8,28 +6,24 @@ export class Player {
         this.camera = camera;
         this.domElement = domElement || document.body;
         
-        // Physics
         this.velocity = new THREE.Vector3();
-        this.inputVector = new THREE.Vector3(); // Reusable vector for inputs
         this.speed = 12.0; 
         this.gravity = 30.0;
         
-        // Flags (Desktop)
+        // Flags
         this.moveForward = false;
         this.moveBackward = false;
         this.moveLeft = false;
         this.moveRight = false;
         this.canJump = false;
 
-        // 1. FORCE LEVEL VIEW (Fixes "Looking at Ceiling" for everyone)
-        this.camera.rotation.x = 0;
-        this.camera.rotation.z = 0;
+        // Force Upright Camera
+        this.camera.up.set(0, 1, 0); 
+        this.camera.rotation.set(0, 0, 0);
 
-        // Detect Mobile
         this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
         if (this.isMobile) {
-            // Widen FOV for small screens
             this.camera.fov = 85; 
             this.camera.updateProjectionMatrix();
             this.setupMobileControls();
@@ -42,99 +36,62 @@ export class Player {
         return this.controls ? this.controls.getObject() : this.camera;
     }
 
-    // --- DESKTOP SETUP ---
+    // --- NEW: Helper to teleport player ---
+    setPosition(x, y, z) {
+        this.camera.position.set(x, y, z);
+        this.velocity.set(0, 0, 0);
+    }
+
     setupDesktopControls() {
         console.log("Player: Desktop Controls Active");
         this.controls = new PointerLockControls(this.camera, document.body);
 
         const onKeyDown = (event) => {
             switch (event.code) {
-                case 'ArrowUp':
-                case 'KeyW': this.moveForward = true; break;
-                case 'ArrowLeft':
-                case 'KeyA': this.moveLeft = true; break;
-                case 'ArrowDown':
-                case 'KeyS': this.moveBackward = true; break;
-                case 'ArrowRight':
-                case 'KeyD': this.moveRight = true; break;
-                case 'Space': 
-                    if (this.canJump === true) this.velocity.y += 15; 
-                    this.canJump = false;
-                    break;
+                case 'ArrowUp': case 'KeyW': this.moveForward = true; break;
+                case 'ArrowLeft': case 'KeyA': this.moveLeft = true; break;
+                case 'ArrowDown': case 'KeyS': this.moveBackward = true; break;
+                case 'ArrowRight': case 'KeyD': this.moveRight = true; break;
+                case 'Space': if (this.canJump) { this.velocity.y += 15; this.canJump = false; } break;
             }
         };
 
         const onKeyUp = (event) => {
             switch (event.code) {
-                case 'ArrowUp':
-                case 'KeyW': this.moveForward = false; break;
-                case 'ArrowLeft':
-                case 'KeyA': this.moveLeft = false; break;
-                case 'ArrowDown':
-                case 'KeyS': this.moveBackward = false; break;
-                case 'ArrowRight':
-                case 'KeyD': this.moveRight = false; break;
+                case 'ArrowUp': case 'KeyW': this.moveForward = false; break;
+                case 'ArrowLeft': case 'KeyA': this.moveLeft = false; break;
+                case 'ArrowDown': case 'KeyS': this.moveBackward = false; break;
+                case 'ArrowRight': case 'KeyD': this.moveRight = false; break;
             }
         };
-
         document.addEventListener('keydown', onKeyDown);
         document.addEventListener('keyup', onKeyUp);
-        
-        // Lock cursor on click
-        document.addEventListener('click', () => {
-            this.controls.lock();
-        });
+        document.addEventListener('click', () => { this.controls.lock(); });
     }
 
-    // --- MOBILE SETUP ---
     setupMobileControls() {
         console.log("Player: Mobile Controls Active");
-        
         const zone = document.getElementById('zone_joystick');
         const instructions = document.getElementById('mobile-instructions');
         if (zone) zone.style.display = 'block';
         if (instructions) instructions.style.display = 'block';
 
-        // 1. Joystick
         if (window.nipplejs) {
             this.joystickManager = nipplejs.create({
-                zone: zone,
-                mode: 'static',
-                position: { left: '80px', bottom: '80px' },
-                color: 'white',
-                size: 100
+                zone: zone, mode: 'static', position: { left: '80px', bottom: '80px' }, color: 'white', size: 100
             });
-
             this.joystickData = { x: 0, y: 0 };
-
-            this.joystickManager.on('move', (evt, data) => {
-                if (data.vector) {
-                    this.joystickData.x = data.vector.x; 
-                    this.joystickData.y = data.vector.y; 
-                }
-            });
-
-            this.joystickManager.on('end', () => {
-                this.joystickData.x = 0;
-                this.joystickData.y = 0;
-            });
+            this.joystickManager.on('move', (evt, data) => { if (data.vector) { this.joystickData.x = data.vector.x; this.joystickData.y = data.vector.y; } });
+            this.joystickManager.on('end', () => { this.joystickData.x = 0; this.joystickData.y = 0; });
         }
 
-        // 2. Touch Look
         this.euler = new THREE.Euler(0, 0, 0, 'YXZ');
         this.euler.copy(this.camera.rotation);
-        
-        let touchStartX = 0;
-        let touchStartY = 0;
-        const lookSpeed = 0.004; 
+        let touchStartX = 0; let touchStartY = 0; const lookSpeed = 0.004; 
 
         document.addEventListener('touchstart', (e) => {
             for (let i = 0; i < e.touches.length; i++) {
-                const t = e.touches[i];
-                if (t.clientX > window.innerWidth / 2) {
-                    touchStartX = t.clientX;
-                    touchStartY = t.clientY;
-                }
+                if (e.touches[i].clientX > window.innerWidth / 2) { touchStartX = e.touches[i].clientX; touchStartY = e.touches[i].clientY; }
             }
         }, { passive: false });
 
@@ -145,94 +102,68 @@ export class Player {
                 if (t.clientX > window.innerWidth / 2) {
                     const deltaX = t.clientX - touchStartX;
                     const deltaY = t.clientY - touchStartY;
-
                     this.euler.y -= deltaX * lookSpeed;
                     this.euler.x -= deltaY * lookSpeed;
                     this.euler.x = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, this.euler.x));
-
                     this.camera.quaternion.setFromEuler(this.euler);
-
-                    touchStartX = t.clientX;
-                    touchStartY = t.clientY;
+                    touchStartX = t.clientX; touchStartY = t.clientY;
                 }
             }
         }, { passive: false });
     }
 
-    // --- MAIN LOOP ---
     update(delta, colliders) {
-        
-        // 1. CALCULATE INPUT DIRECTION (Z = Forward/Back, X = Left/Right)
-        // Range: -1 to 1
-        let inputZ = 0;
-        let inputX = 0;
-
+        let inputZ = 0; let inputX = 0;
         if (this.isMobile) {
-            inputZ = this.joystickData.y; // Joystick Up is +
-            inputX = this.joystickData.x; // Joystick Right is +
+            inputZ = this.joystickData.y; 
+            inputX = this.joystickData.x; 
         } else {
             inputZ = Number(this.moveForward) - Number(this.moveBackward);
             inputX = Number(this.moveRight) - Number(this.moveLeft);
         }
 
-        // 2. CALCULATE WORLD MOVE VECTOR (Flattened to Floor)
-        // We do this for BOTH Desktop and Mobile to prevent flying
-        
-        // Get Looking Direction
+        // --- WORLD MOVEMENT (Prevents Flying on Mobile & Desktop) ---
         const camDir = new THREE.Vector3();
         this.camera.getWorldDirection(camDir);
-        camDir.y = 0; // Flatten
+        camDir.y = 0; // Flatten the direction
         camDir.normalize();
 
-        // Get Side Direction (Cross product with Up)
         const sideDir = new THREE.Vector3();
-        sideDir.crossVectors(camDir, new THREE.Vector3(0, 1, 0)).normalize(); // Actually points Left by default in Three.js logic usually
-        
-        // Correct side direction mapping:
-        // camDir x Up = Left (usually). 
-        // We want Right for +X input.
-        // Let's explicitly construct the velocity vector:
+        sideDir.crossVectors(camDir, new THREE.Vector3(0, 1, 0)).normalize(); 
 
-        // Forward Movement
         const moveVec = new THREE.Vector3();
-        moveVec.addScaledVector(camDir, inputZ); // Move Forward/Back
-        
-        // Side Movement
-        // Note: cross(Forward, Up) -> Left. So -inputX moves Right.
-        moveVec.addScaledVector(sideDir, -inputX); 
-
+        moveVec.addScaledVector(camDir, inputZ);
+        moveVec.addScaledVector(sideDir, inputX); // Corrected: +inputX is Right
         moveVec.normalize();
 
-        // 3. APPLY TO VELOCITY
         if (inputZ !== 0 || inputX !== 0) {
-            // Accelerate
             this.velocity.x += (moveVec.x * this.speed * 5 * delta); 
             this.velocity.z += (moveVec.z * this.speed * 5 * delta);
         }
 
-        // Friction (Damping)
+        // Friction
         this.velocity.x -= this.velocity.x * 10.0 * delta;
         this.velocity.z -= this.velocity.z * 10.0 * delta;
-        this.velocity.y -= this.gravity * delta; // Gravity
+        this.velocity.y -= this.gravity * delta; 
 
-        // 4. MOVE PLAYER (World Coordinates)
+        // Apply Collision
         const originalPos = this.camera.position.clone();
 
-        // Move X
+        // X Movement
         this.camera.position.x += this.velocity.x * delta;
         if (this.checkCollision(colliders)) {
             this.camera.position.x = originalPos.x;
             this.velocity.x = 0;
         }
 
-        // Move Z
+        // Z Movement
         this.camera.position.z += this.velocity.z * delta;
         if (this.checkCollision(colliders)) {
             this.camera.position.z = originalPos.z;
             this.velocity.z = 0;
         }
 
-        // Move Y
+        // Y Movement
         this.camera.position.y += this.velocity.y * delta;
         if (this.camera.position.y < 1.6) {
             this.velocity.y = 0;
@@ -248,9 +179,7 @@ export class Player {
         playerBox.max.set(this.camera.position.x + size/2, this.camera.position.y + 0.5, this.camera.position.z + size/2);
 
         for (const collider of colliders) {
-            if (playerBox.intersectsBox(collider)) {
-                return true;
-            }
+            if (playerBox.intersectsBox(collider)) return true;
         }
         return false;
     }
