@@ -224,15 +224,38 @@ createSurfaceTexture(bgColor, gridColor) {
     generate() {
         this.questionCounter = 0;
         const canvas = document.createElement('canvas');
-        canvas.width = 512; canvas.height = 512;
+        canvas.width = 512;
+        canvas.height = 512;
         const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#1a1a2e'; ctx.fillRect(0, 0, 512, 512);
-        ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
-        for (let i = 0; i < 512; i += 64) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(512, i); ctx.stroke(); ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 512); ctx.stroke(); }
-        ctx.strokeStyle = '#00ecff'; ctx.lineWidth = 8; ctx.beginPath();
-        for (let x = 0; x < 512; x++) { const y = 256 + Math.sin(x * 0.05) * 100; if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+
+        // CHANGE 1: BRIGHT BACKGROUND (Deep Sky Blue)
+        // Was: #1a1a2e (Dark) -> Now: #0077be (Cheerful Blue)
+        ctx.fillStyle = '#0077be'; 
+        ctx.fillRect(0, 0, 512, 512);
+
+        // CHANGE 2: GRID COLOR (White for contrast on bright wall)
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 512; i += 64) {
+            ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(512, i); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 512); ctx.stroke();
+        }
+
+        // CHANGE 3: NEON STRIP (Yellow for contrast)
+        ctx.strokeStyle = '#ffcc00'; // Bright Yellow Neon
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        for (let x = 0; x < 512; x++) {
+            const y = 256 + Math.sin(x * 0.05) * 60; // Slightly gentler wave
+            if (x === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
         ctx.stroke();
 
+        const wallTex = new THREE.CanvasTexture(canvas);
+        const wallGeo = new THREE.BoxGeometry(this.cellSize, 4, this.cellSize);
+        const wallMat = new THREE.MeshLambertMaterial({ color: 0xffffff, map: wallTex });
+        // ---------------------------------------------
         const wallTex = new THREE.CanvasTexture(canvas);
         const wallGeo = new THREE.BoxGeometry(this.cellSize, 4, this.cellSize);
         const wallMat = new THREE.MeshLambertMaterial({ color: 0xffffff, map: wallTex });
