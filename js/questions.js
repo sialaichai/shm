@@ -1,9 +1,9 @@
 // questions.js
-import { data as remembering } from './questions/cat_remembering.js';
-import { data as understanding } from './questions/cat_understanding.js';
-import { data as applying } from './questions/cat_applying.js';
-import { data as analyzing } from './questions/cat_analyzing.js';
-import { data as evaluating } from './questions/cat_evaluating.js';
+import { data as remembering } from '../questions/cat_remembering.js';
+import { data as understanding } from '../questions/cat_understanding.js';
+import { data as applying } from '../questions/cat_applying.js';
+import { data as analyzing } from '../questions/cat_analyzing.js';
+import { data as evaluating } from '../questions/cat_evaluating.js';
 
 // Combine all into one master list
 export const Questions = [
