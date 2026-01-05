@@ -6,12 +6,18 @@
     <title>Physics Question Editor</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; max-width: 1000px; margin: 0 auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-left: 10px; }
+        .header { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .controls { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; }
+        .load-section { display: flex; gap: 10px; align-items: center; background: #e9ecef; padding: 10px; border-radius: 6px; }
+        
+        .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn-primary { background: #007bff; color: white; }
         .btn-success { background: #28a745; color: white; }
         .btn-danger { background: #dc3545; color: white; }
         .btn-secondary { background: #6c757d; color: white; }
+        .btn-info { background: #17a2b8; color: white; }
+
+        select { padding: 9px; border-radius: 4px; border: 1px solid #ccc; }
         
         .card { background: white; padding: 20px; margin-bottom: 15px; border-radius: 8px; border-left: 5px solid #007bff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .form-group { margin-bottom: 15px; }
@@ -22,68 +28,119 @@
         .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .option-item { background: #f8f9fa; padding: 10px; border-radius: 4px; display: flex; align-items: center; }
         .correct-answer { border: 2px solid #28a745; background: #e8f5e9; }
+        
+        .status-msg { margin-top: 10px; color: #666; font-size: 0.9em; font-style: italic; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <div>
-            <h2>Question Category Editor</h2>
-            <p>Load a `cat_*.js` file, edit, and download.</p>
+        <h2>Question Category Editor</h2>
+        <div class="controls">
+            <div class="load-section">
+                <select id="catSelector">
+                    <option value="cat_remembering.js">Remembering (Level 1)</option>
+                    <option value="cat_understanding.js">Understanding (Level 2)</option>
+                    <option value="cat_applying.js">Applying (Level 3)</option>
+                    <option value="cat_analyzing.js">Analyzing (Level 4)</option>
+                    <option value="cat_evaluating.js">Evaluating (Level 5)</option>
+                </select>
+                <button class="btn btn-info" onclick="loadFromProject()">⬇ Load from Project</button>
+            </div>
+            
+            <div style="font-size: 0.9em; color: #777;">
+                OR
+                <input type="file" id="fileInput" accept=".js" style="display:none">
+                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('fileInput').click()">📂 Browse...</button>
+            </div>
+
+            <div>
+                <button class="btn btn-primary" onclick="addNewQuestion()">+ Add Question</button>
+                <button class="btn btn-success" onclick="saveFile()">💾 Save (Download)</button>
+            </div>
         </div>
-        <div>
-            <input type="file" id="fileInput" accept=".js" style="display:none">
-            <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">📂 Load File</button>
-            <button class="btn btn-primary" onclick="addNewQuestion()">+ Add New</button>
-            <button class="btn btn-success" onclick="saveFile()">💾 Download</button>
-        </div>
+        <div id="status" class="status-msg">Ready. Select a category and click Load.</div>
     </div>
 
     <div id="editor-container"></div>
 
     <script>
         let currentQuestions = [];
-        let currentFileName = "cat_new.js";
+        let currentFileName = "cat_remembering.js";
 
-        // Handle File Loading
+        // --- NEW: DIRECT LOAD FUNCTION ---
+        async function loadFromProject() {
+            const filename = document.getElementById('catSelector').value;
+            currentFileName = filename;
+            const status = document.getElementById('status');
+
+            status.textContent = `Fetching questions/${filename}...`;
+
+            try {
+                // Fetch the file from the server relative path
+                const response = await fetch(`./questions/${filename}`);
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to load file (Status: ${response.status}). Are you running a local server?`);
+                }
+
+                const text = await response.text();
+                parseAndLoad(text);
+                status.textContent = `Loaded ${currentQuestions.length} questions from ${filename}`;
+            } catch (err) {
+                console.error(err);
+                alert("Could not load file directly.\n\nMake sure you are running a local server (localhost).\nIf opening via file://, use the 'Browse' button instead.");
+                status.textContent = "Error loading file.";
+            }
+        }
+
+        // --- EXISTING: MANUAL BROWSE ---
         document.getElementById('fileInput').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if(!file) return;
-            
             currentFileName = file.name;
             const reader = new FileReader();
-            reader.onload = function(e) {
-                const text = e.target.result;
-                try {
-                    // Extract JSON from "export const data = [...]"
-                    const jsonStr = text.replace(/export const data =/, '').replace(/;s*$/, '');
-                    // Parse loosely
-                    const parseFunc = new Function("return " + jsonStr);
-                    currentQuestions = parseFunc();
-                    renderEditor();
-                    alert("Loaded " + currentQuestions.length + " questions.");
-                } catch(err) {
-                    alert("Error parsing file. Ensure it follows the export const data = [...] format.");
-                    console.error(err);
-                }
-            };
+            reader.onload = function(e) { parseAndLoad(e.target.result); };
             reader.readAsText(file);
         });
+
+        // --- PARSING LOGIC ---
+        function parseAndLoad(text) {
+            try {
+                // Strip "export const data =" and ending ";" to get raw JSON
+                // Handle newlines/spaces carefully
+                const jsonPart = text.replace(/export\s+const\s+data\s*=\s*/, '').replace(/;\s*$/, '');
+                
+                // Use Function constructor to parse loose JS object syntax
+                const parseFunc = new Function("return " + jsonPart);
+                currentQuestions = parseFunc();
+                
+                renderEditor();
+            } catch(err) {
+                alert("Error parsing file format. Ensure it starts with 'export const data = ['");
+                console.error(err);
+            }
+        }
 
         function renderEditor() {
             const container = document.getElementById('editor-container');
             container.innerHTML = "";
             
+            if (!currentQuestions || currentQuestions.length === 0) {
+                container.innerHTML = "<p style='text-align:center; padding:20px;'>No questions loaded.</p>";
+                return;
+            }
+
             currentQuestions.forEach((q, index) => {
                 const html = `
                     <div class="card">
                         <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                            <strong>Question #${index + 1}</strong>
+                            <strong>#${index + 1} (${q.category || 'Unknown'})</strong>
                             <button class="btn btn-danger" style="padding: 5px 10px; font-size:12px;" onclick="deleteQuestion(${index})">Delete</button>
                         </div>
                         
                         <div class="form-group">
-                            <label>Question Text (Supports LaTeX e.g., $x^2$)</label>
+                            <label>Question Text (LaTeX supported)</label>
                             <textarea onchange="updateField(${index}, 'question', this.value)">${q.question}</textarea>
                         </div>
 
@@ -98,7 +155,7 @@
                             </div>
                         </div>
 
-                        <label>Options (Check the box for the correct answer)</label>
+                        <label>Options (Select correct answer)</label>
                         <div class="options-grid">
                             ${q.options.map((opt, i) => `
                                 <div class="option-item ${opt.correct ? 'correct-answer' : ''}">
@@ -109,7 +166,7 @@
                         </div>
 
                         <div class="form-group" style="margin-top: 15px;">
-                            <label>Feedback (Explanation shown after answering)</label>
+                            <label>Feedback</label>
                             <input type="text" value="${q.feedback ? q.feedback.replace(/"/g, '&quot;') : ''}" onchange="updateField(${index}, 'feedback', this.value)">
                         </div>
                     </div>
@@ -127,11 +184,9 @@
         }
 
         function updateCorrect(qIndex, optIndex) {
-            // Reset all to false first
             currentQuestions[qIndex].options.forEach(o => o.correct = false);
-            // Set selected to true
             currentQuestions[qIndex].options[optIndex].correct = true;
-            renderEditor(); // Re-render to show green highlight
+            renderEditor();
         }
 
         function deleteQuestion(index) {
@@ -144,15 +199,15 @@
         function addNewQuestion() {
             currentQuestions.push({
                 level: 1,
-                category: "New Category",
-                question: "New Question Text",
+                category: "Remembering",
+                question: "New Question...",
                 options: [
                     { text: "Option A", correct: true },
                     { text: "Option B", correct: false },
                     { text: "Option C", correct: false },
                     { text: "Option D", correct: false }
                 ],
-                feedback: "Explanation goes here."
+                feedback: ""
             });
             renderEditor();
             window.scrollTo(0, document.body.scrollHeight);
@@ -170,6 +225,8 @@
             a.download = currentFileName;
             a.click();
             URL.revokeObjectURL(url);
+            
+            document.getElementById('status').textContent = `Downloaded ${currentFileName}. Please move it to questions/ folder.`;
         }
     </script>
 </body>
