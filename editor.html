@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Physics Question Editor</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; max-width: 1000px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-left: 10px; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        
+        .card { background: white; padding: 20px; margin-bottom: 15px; border-radius: 8px; border-left: 5px solid #007bff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
+        input[type="text"], textarea, input[type="number"] { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        textarea { height: 60px; resize: vertical; }
+        
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .option-item { background: #f8f9fa; padding: 10px; border-radius: 4px; display: flex; align-items: center; }
+        .correct-answer { border: 2px solid #28a745; background: #e8f5e9; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div>
+            <h2>Question Category Editor</h2>
+            <p>Load a `cat_*.js` file, edit, and download.</p>
+        </div>
+        <div>
+            <input type="file" id="fileInput" accept=".js" style="display:none">
+            <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">📂 Load File</button>
+            <button class="btn btn-primary" onclick="addNewQuestion()">+ Add New</button>
+            <button class="btn btn-success" onclick="saveFile()">💾 Download</button>
+        </div>
+    </div>
+
+    <div id="editor-container"></div>
+
+    <script>
+        let currentQuestions = [];
+        let currentFileName = "cat_new.js";
+
+        // Handle File Loading
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if(!file) return;
+            
+            currentFileName = file.name;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                try {
+                    // Extract JSON from "export const data = [...]"
+                    const jsonStr = text.replace(/export const data =/, '').replace(/;s*$/, '');
+                    // Parse loosely
+                    const parseFunc = new Function("return " + jsonStr);
+                    currentQuestions = parseFunc();
+                    renderEditor();
+                    alert("Loaded " + currentQuestions.length + " questions.");
+                } catch(err) {
+                    alert("Error parsing file. Ensure it follows the export const data = [...] format.");
+                    console.error(err);
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        function renderEditor() {
+            const container = document.getElementById('editor-container');
+            container.innerHTML = "";
+            
+            currentQuestions.forEach((q, index) => {
+                const html = `
+                    <div class="card">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                            <strong>Question #${index + 1}</strong>
+                            <button class="btn btn-danger" style="padding: 5px 10px; font-size:12px;" onclick="deleteQuestion(${index})">Delete</button>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Question Text (Supports LaTeX e.g., $x^2$)</label>
+                            <textarea onchange="updateField(${index}, 'question', this.value)">${q.question}</textarea>
+                        </div>
+
+                        <div class="form-group" style="display:flex; gap:20px;">
+                            <div style="flex:1">
+                                <label>Category</label>
+                                <input type="text" value="${q.category}" onchange="updateField(${index}, 'category', this.value)">
+                            </div>
+                            <div style="flex:1">
+                                <label>Level</label>
+                                <input type="number" value="${q.level}" onchange="updateField(${index}, 'level', parseInt(this.value))">
+                            </div>
+                        </div>
+
+                        <label>Options (Check the box for the correct answer)</label>
+                        <div class="options-grid">
+                            ${q.options.map((opt, i) => `
+                                <div class="option-item ${opt.correct ? 'correct-answer' : ''}">
+                                    <input type="radio" name="ans_${index}" ${opt.correct ? 'checked' : ''} onchange="updateCorrect(${index}, ${i})">
+                                    <input type="text" style="margin-left:8px;" value="${opt.text.replace(/"/g, '&quot;')}" onchange="updateOptionText(${index}, ${i}, this.value)">
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <div class="form-group" style="margin-top: 15px;">
+                            <label>Feedback (Explanation shown after answering)</label>
+                            <input type="text" value="${q.feedback ? q.feedback.replace(/"/g, '&quot;') : ''}" onchange="updateField(${index}, 'feedback', this.value)">
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += html;
+            });
+        }
+
+        function updateField(index, field, value) {
+            currentQuestions[index][field] = value;
+        }
+
+        function updateOptionText(qIndex, optIndex, value) {
+            currentQuestions[qIndex].options[optIndex].text = value;
+        }
+
+        function updateCorrect(qIndex, optIndex) {
+            // Reset all to false first
+            currentQuestions[qIndex].options.forEach(o => o.correct = false);
+            // Set selected to true
+            currentQuestions[qIndex].options[optIndex].correct = true;
+            renderEditor(); // Re-render to show green highlight
+        }
+
+        function deleteQuestion(index) {
+            if(confirm("Delete this question?")) {
+                currentQuestions.splice(index, 1);
+                renderEditor();
+            }
+        }
+
+        function addNewQuestion() {
+            currentQuestions.push({
+                level: 1,
+                category: "New Category",
+                question: "New Question Text",
+                options: [
+                    { text: "Option A", correct: true },
+                    { text: "Option B", correct: false },
+                    { text: "Option C", correct: false },
+                    { text: "Option D", correct: false }
+                ],
+                feedback: "Explanation goes here."
+            });
+            renderEditor();
+            window.scrollTo(0, document.body.scrollHeight);
+        }
+
+        function saveFile() {
+            const jsonStr = JSON.stringify(currentQuestions, null, 4);
+            const fileContent = `export const data = ${jsonStr};`;
+            
+            const blob = new Blob([fileContent], { type: "text/javascript" });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = currentFileName;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
