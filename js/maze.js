@@ -255,10 +255,6 @@ createSurfaceTexture(bgColor, gridColor) {
         const wallTex = new THREE.CanvasTexture(canvas);
         const wallGeo = new THREE.BoxGeometry(this.cellSize, 4, this.cellSize);
         const wallMat = new THREE.MeshLambertMaterial({ color: 0xffffff, map: wallTex });
-        // ---------------------------------------------
-        const wallTex = new THREE.CanvasTexture(canvas);
-        const wallGeo = new THREE.BoxGeometry(this.cellSize, 4, this.cellSize);
-        const wallMat = new THREE.MeshLambertMaterial({ color: 0xffffff, map: wallTex });
 
         const floorTex = this.createSurfaceTexture('#1a1a24', '#333344');
         const floorGeo = new THREE.PlaneGeometry(this.grid[0].length * this.cellSize, this.grid.length * this.cellSize);
