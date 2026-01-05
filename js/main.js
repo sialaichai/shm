@@ -107,6 +107,7 @@ try {
             
             // 3. Lock the mouse cursor
             window.game.player.controls.lock();
+		}
         });
     }
 } catch (e) {
