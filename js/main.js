@@ -90,6 +90,23 @@ try {
         startBtn.style.pointerEvents = "auto";
         startBtn.addEventListener('click', () => {
             console.log("Start button clicked");
+			// 1. Hide the menu
+        startScreen.style.display = 'none';
+        
+        // 2. Activate Game Logic
+        if (window.game) {
+            window.game.ui.isGameActive = true;
+
+            // --- ADD THESE TWO LINES ---
+            // A. Resume Audio Context (Fixes browser blocking audio)
+            window.game.audioManager.resumeContext(); 
+            
+            // B. Unmute and Play the Random Track
+            window.game.audioManager.setMode('GAME'); 
+            // ---------------------------
+            
+            // 3. Lock the mouse cursor
+            window.game.player.controls.lock();
         });
     }
 } catch (e) {
