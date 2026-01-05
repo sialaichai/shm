@@ -330,7 +330,11 @@ createSurfaceTexture(bgColor, gridColor) {
         this.colliders.push(new THREE.Box3().setFromObject(door));
 
         const qID = this.questionCounter++; 
-        const level = 3; 
+        // --- CHANGE THIS LINE ---
+        // Was: const level = 3;
+        // Now: Randomly picks Level 3 (Applying) or Level 4 (Analyzing/Evaluating)
+        const level = Math.random() < 0.5 ? 3 : 4; 
+        // ------------------------ 
         door.userData = { type: 'door', id: qID, level: level };
         if (this.ui && typeof this.ui.registerQuestion === 'function') {
             try { this.ui.registerQuestion(qID, level); } catch (e) { console.warn("UI Registration Failed for Door:", e); }
