@@ -46,39 +46,28 @@ export class Maze {
     }
 
 createSurfaceTexture(bgColor, gridColor) {
-        const canvas = document.createElement('canvas');
-        canvas.width = 512;
-        canvas.height = 512;
+         const canvas = document.createElement('canvas');
+        canvas.width = 2048;
+        canvas.height = 2048;
         const ctx = canvas.getContext('2d');
 
-        // CHANGE 1: BRIGHT BACKGROUND (Deep Sky Blue)
-        // Was: #1a1a2e (Dark) -> Now: #0077be (Cheerful Blue)
-        ctx.fillStyle = '#0077be'; 
-        ctx.fillRect(0, 0, 512, 512);
+        // Background
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, 2048, 2048);
 
-        // CHANGE 2: GRID COLOR (White for contrast on bright wall)
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.lineWidth = 2;
-        for (let i = 0; i < 512; i += 64) {
-            ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(512, i); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 512); ctx.stroke();
+        // --- GRID CHANGE: 50% SMALLER TILES ---
+        // Was 11 (1 tile per room), now 22 (4 tiles per room)
+        const tileCount = 22; 
+        const tileSize = 2048 / tileCount; // ~93px per tile
+
+        // Grid Lines
+        ctx.strokeStyle = gridColor;
+        ctx.lineWidth = 2; // Thinner lines for smaller tiles
+        for (let i = 0; i <= tileCount; i++) {
+            const pos = i * tileSize;
+            ctx.beginPath(); ctx.moveTo(0, pos); ctx.lineTo(2048, pos); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(pos, 0); ctx.lineTo(pos, 2048); ctx.stroke();
         }
-
-        // CHANGE 3: NEON STRIP (Yellow for contrast)
-        ctx.strokeStyle = '#ffcc00'; // Bright Yellow Neon
-        ctx.lineWidth = 8;
-        ctx.beginPath();
-        for (let x = 0; x < 512; x++) {
-            const y = 256 + Math.sin(x * 0.05) * 60; // Slightly gentler wave
-            if (x === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-
-        const wallTex = new THREE.CanvasTexture(canvas);
-        const wallGeo = new THREE.BoxGeometry(this.cellSize, 4, this.cellSize);
-        const wallMat = new THREE.MeshLambertMaterial({ color: 0xffffff, map: wallTex });
-        // ---------------------------------------------
 
         // --- UPDATED LIST OF GRAPHS ---
         const graphs = ['spring', 'pendulum', 'damped', 'energy', 'resonance', 'shm_acc', 'waves'];
