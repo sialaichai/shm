@@ -3,110 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Physics Question Editor (Final Fix)</title>
+    <title>Physics Question Editor (Layering Fixed)</title>
     
     <script defer src="//unpkg.com/mathlive"></script>
     
     <script>
         window.MathJax = { 
             tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
-            startup: { typeset: false } // We will trigger manually
+            startup: { typeset: false } 
         };
     </script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 
     <style>
         /* --- GLOBAL STYLES --- */
+        :root {
+            /* THE NUCLEAR OPTION: Max possible Z-Index for the keyboard */
+            --keyboard-zindex: 2147483647 !important;
+        }
+
         body { 
             font-family: 'Segoe UI', sans-serif; 
             background: #f0f2f5; 
             padding: 20px; 
             max-width: 1000px; 
             margin: 0 auto; 
-            padding-bottom: 120px; /* Space for footer/keyboard */
-            
-            /* FORCE MATH KEYBOARD TO TOP */
-            --keyboard-zindex: 2147483647 !important; 
+            padding-bottom: 150px; 
         }
 
-        /* --- HEADER --- */
+        /* --- CONTROLS & HEADER --- */
         .header { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; position: sticky; top: 0; z-index: 50; }
         .controls { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; }
         .load-section { display: flex; gap: 10px; align-items: center; background: #e9ecef; padding: 10px; border-radius: 6px; }
 
-        /* --- BUTTONS --- */
         .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; }
         .btn-primary { background: #007bff; color: white; }
         .btn-success { background: #28a745; color: white; }
         .btn-danger { background: #dc3545; color: white; }
         .btn-info { background: #17a2b8; color: white; }
-        .btn-math { background: #6f42c1; color: white; padding: 4px 10px; font-size: 12px; margin-left: 5px; }
+        .btn-math { background: #6f42c1; color: white; padding: 4px 10px; font-size: 12px; margin-left: 5px; cursor:pointer;}
         .btn-math:hover { background: #59359a; }
 
-        /* --- FORMS --- */
+        /* --- CARDS & INPUTS --- */
         .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; border-left: 5px solid #007bff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
         input[type="text"], textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: 'Segoe UI', sans-serif; }
         textarea { height: 60px; resize: vertical; }
+        .preview-box { background: #fffde7; padding: 10px; border: 1px solid #f0e68c; border-radius: 4px; margin-top: 5px; min-height: 24px; color: #333; font-size: 0.95em; }
 
-        /* --- PREVIEW BOX --- */
-        .preview-box { 
-            background: #fffde7; 
-            padding: 10px; 
-            border: 1px solid #f0e68c; 
-            border-radius: 4px; 
-            margin-top: 5px; 
-            min-height: 24px; 
-            color: #333;
-            font-size: 0.95em;
+        /* --- CUSTOM MODAL (DIV BASED) --- */
+        #mathOverlay {
+            display: none; 
+            position: fixed; 
+            top: 0; left: 0; 
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); 
+            /* High z-index, but LOWER than the keyboard (2147483647) */
+            z-index: 9000; 
+            justify-content: center; 
+            align-items: center;
         }
 
-        /* --- MATH MODAL (NATIVE DIALOG) --- */
-        dialog::backdrop {
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(2px);
-        }
-        dialog {
-            border: none;
+        #mathModalContent {
+            background: white; 
+            padding: 25px; 
+            width: 90%; 
+            max-width: 600px; 
             border-radius: 8px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            padding: 20px;
-            width: 90%;
-            max-width: 600px;
-            /* Ensure dialog is below the keyboard z-index */
-            z-index: 1000; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            display: flex; 
+            flex-direction: column;
+            gap: 15px;
+            /* Ensure the modal content doesn't clip the keyboard */
+            overflow: visible; 
         }
-        
-        /* The Math Field inside the dialog */
+
+        /* The actual MathLive input field */
         math-field {
-            width: 100%;
             font-size: 24px;
             padding: 10px;
-            border: 1px solid #ddd;
+            border: 1px solid #ccc;
             border-radius: 4px;
-            margin: 15px 0;
-            background: #fff;
-            /* Important: Allow it to receive clicks */
-            pointer-events: auto;
+            width: 100%;
+            background: white;
+            /* Ensure it sits nicely in the modal */
+            position: relative;
+            z-index: 9001; 
         }
     </style>
 </head>
 <body>
 
-    <dialog id="mathDialog">
-        <h3 style="margin-top:0">Math Editor</h3>
-        <p style="margin-bottom:0; color:#666; font-size:0.9em;">
-            Use the virtual keyboard or type LaTeX (e.g., \sqrt).
-        </p>
-        
-        <math-field id="mf-input" virtual-keyboard-mode="manual"></math-field>
-
-        <div style="display:flex; justify-content:flex-end; gap:10px;">
-            <button class="btn btn-danger" onclick="closeMathDialog()">Cancel</button>
-            <button class="btn btn-success" onclick="insertMath()">Insert</button>
+    <div id="mathOverlay">
+        <div id="mathModalContent">
+            <h3 style="margin:0;">Math Editor</h3>
+            <p style="margin:0; color:#666; font-size:0.9em;">Type your equation. Click the keyboard icon on the right if needed.</p>
+            
+            <math-field id="mf-input" virtual-keyboard-mode="manual"></math-field>
+            
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button class="btn btn-danger" onclick="closeMathOverlay()">Cancel</button>
+                <button class="btn btn-success" onclick="insertMath()">Insert Equation</button>
+            </div>
         </div>
-    </dialog>
+    </div>
 
 
     <div class="header">
@@ -137,28 +138,26 @@
         let currentQuestions = [];
         let currentFileName = "cat_remembering.js";
         
-        // --- MATH DIALOG LOGIC ---
-        let activeInputId = null; // Stores which text box called the editor
-        const dialog = document.getElementById('mathDialog');
+        // --- MATH MODAL LOGIC ---
+        let activeInputId = null;
+        const overlay = document.getElementById('mathOverlay');
         const mf = document.getElementById('mf-input');
 
         function openMathModal(targetId) {
             activeInputId = targetId;
+            mf.setValue(''); // Clear previous
             
-            // 1. Reset Field
-            mf.setValue('');
+            // Show Overlay
+            overlay.style.display = 'flex';
             
-            // 2. Show Modal (using native showModal handles focus traps automatically)
-            dialog.showModal();
-
-            // 3. FORCE FOCUS (Crucial step for keyboard to work)
+            // Force focus so typing works immediately
             setTimeout(() => {
-                mf.focus(); 
-            }, 50);
+                mf.focus();
+            }, 100);
         }
 
-        function closeMathDialog() {
-            dialog.close();
+        function closeMathOverlay() {
+            overlay.style.display = 'none';
             activeInputId = null;
         }
 
@@ -184,7 +183,7 @@
                 
                 // Trigger updates
                 targetInput.dispatchEvent(new Event('change'));
-                closeMathDialog();
+                closeMathOverlay();
             }
         }
 
@@ -196,7 +195,6 @@
             status.textContent = `Fetching questions/${filename}...`;
 
             try {
-                // Ensure this path matches your folder structure!
                 const response = await fetch(`./questions/${filename}`); 
                 if (!response.ok) throw new Error("404 Not Found");
                 
@@ -205,7 +203,7 @@
                 status.textContent = `Loaded ${currentQuestions.length} items from ${filename}`;
             } catch (err) {
                 console.error(err);
-                alert("Could not load file. \n1. Check if 'questions' folder is in root.\n2. Check browser console.");
+                alert("Could not load file. Ensure 'questions' folder is correct.");
             }
         }
 
@@ -216,7 +214,7 @@
                 currentQuestions = parseFunc();
                 renderEditor();
             } catch(err) {
-                alert("Error parsing JS file. Format might be wrong.");
+                alert("Error parsing JS file.");
             }
         }
 
@@ -226,12 +224,12 @@
             container.innerHTML = "";
             
             if (!currentQuestions.length) {
-                container.innerHTML = "<div style='text-align:center; padding:20px;'>No questions loaded. Click 'Load' or 'Add'.</div>";
+                container.innerHTML = "<div style='text-align:center; padding:20px;'>No questions loaded. Click 'Load'.</div>";
                 return;
             }
 
             currentQuestions.forEach((q, index) => {
-                // Generate IDs
+                // Generate Unique IDs
                 const qId = `q-${index}`;
                 const fbId = `fb-${index}`;
                 
@@ -275,7 +273,6 @@
                 container.innerHTML += html;
             });
 
-            // Trigger MathJax
             if(window.MathJax && window.MathJax.typesetPromise) {
                 MathJax.typesetPromise().catch(e => console.log(e));
             }
