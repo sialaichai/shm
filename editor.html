@@ -13,8 +13,17 @@
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; max-width: 1000px; margin: 0 auto; padding-bottom: 100px; }
         
+        body {font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; max-width: 1000px; margin: 0 auto; padding-bottom: 100px;
+    /* Force the math keyboard to be the top-most layer (above the modal) */
+    --keyboard-zindex: 20000 !important;
+}
+
+/* Optional: Ensure the math field itself doesn't clip the popups */
+math-field {
+    z-index: 10001;
+    position: relative;
+}
         /* Header & Controls */
         .header { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; position: sticky; top: 0; z-index: 10; }
         .controls { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; }
@@ -63,7 +72,7 @@
     </style>
 </head>
 <body>
-
+    
     <div id="math-modal">
         <div class="modal-content">
             <h3>Math Editor</h3>
