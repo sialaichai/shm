@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Physics Question Editor (Layering Fixed)</title>
+    <title>Physics Question Editor (Robust Panel)</title>
     
     <script defer src="//unpkg.com/mathlive"></script>
     
@@ -16,23 +16,20 @@
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 
     <style>
-        /* --- GLOBAL STYLES --- */
-        :root {
-            /* THE NUCLEAR OPTION: Max possible Z-Index for the keyboard */
-            --keyboard-zindex: 2147483647 !important;
-        }
-
+        /* --- GLOBAL LAYOUT --- */
         body { 
             font-family: 'Segoe UI', sans-serif; 
-            background: #f0f2f5; 
+            background: #f4f6f8; 
+            margin: 0; 
             padding: 20px; 
+            padding-bottom: 300px; /* Extra space for the bottom drawer */
             max-width: 1000px; 
-            margin: 0 auto; 
-            padding-bottom: 150px; 
+            margin-left: auto; 
+            margin-right: auto;
         }
 
-        /* --- CONTROLS & HEADER --- */
-        .header { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; position: sticky; top: 0; z-index: 50; }
+        /* --- CONTROLS --- */
+        .header { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 50; }
         .controls { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; }
         .load-section { display: flex; gap: 10px; align-items: center; background: #e9ecef; padding: 10px; border-radius: 6px; }
 
@@ -41,75 +38,81 @@
         .btn-success { background: #28a745; color: white; }
         .btn-danger { background: #dc3545; color: white; }
         .btn-info { background: #17a2b8; color: white; }
-        .btn-math { background: #6f42c1; color: white; padding: 4px 10px; font-size: 12px; margin-left: 5px; cursor:pointer;}
-        .btn-math:hover { background: #59359a; }
+        /* The Math Button */
+        .btn-math { 
+            background: #6610f2; color: white; 
+            padding: 2px 8px; font-size: 12px; margin-left: 5px; 
+            border-radius: 4px; cursor: pointer; border: none;
+        }
+        .btn-math:hover { background: #520dc2; }
 
-        /* --- CARDS & INPUTS --- */
-        .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; border-left: 5px solid #007bff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        /* --- EDITOR CARDS --- */
+        .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; border-left: 5px solid #007bff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-top: 20px;}
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
         input[type="text"], textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: 'Segoe UI', sans-serif; }
         textarea { height: 60px; resize: vertical; }
-        .preview-box { background: #fffde7; padding: 10px; border: 1px solid #f0e68c; border-radius: 4px; margin-top: 5px; min-height: 24px; color: #333; font-size: 0.95em; }
+        .preview-box { background: #fffde7; padding: 8px; border: 1px solid #f0e68c; border-radius: 4px; margin-top: 5px; min-height: 24px; color: #333; font-size: 0.9em; }
 
-        /* --- CUSTOM MODAL (DIV BASED) --- */
-        #mathOverlay {
-            display: none; 
-            position: fixed; 
-            top: 0; left: 0; 
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6); 
-            /* High z-index, but LOWER than the keyboard (2147483647) */
-            z-index: 9000; 
-            justify-content: center; 
-            align-items: center;
-        }
-
-        #mathModalContent {
-            background: white; 
-            padding: 25px; 
-            width: 90%; 
-            max-width: 600px; 
-            border-radius: 8px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            display: flex; 
+        /* --- THE FIXED MATH DRAWER (BOTTOM PANEL) --- */
+        #math-drawer {
+            display: none; /* Hidden by default */
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: #fff;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+            z-index: 9000; /* High, but safe */
+            padding: 20px;
+            box-sizing: border-box;
+            border-top: 4px solid #6610f2;
             flex-direction: column;
             gap: 15px;
-            /* Ensure the modal content doesn't clip the keyboard */
-            overflow: visible; 
+        }
+        
+        #math-drawer.active {
+            display: flex;
+            animation: slideUp 0.3s ease-out;
         }
 
-        /* The actual MathLive input field */
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        /* The Math Field Configuration */
         math-field {
+            width: 100%;
             font-size: 24px;
             padding: 10px;
             border: 1px solid #ccc;
-            border-radius: 4px;
-            width: 100%;
-            background: white;
-            /* Ensure it sits nicely in the modal */
-            position: relative;
-            z-index: 9001; 
+            border-radius: 6px;
+            background: #fafafa;
         }
+        
+        /* Drawer Actions */
+        .drawer-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .drawer-info { color: #666; font-size: 0.9em; }
     </style>
 </head>
 <body>
 
-    <div id="mathOverlay">
-        <div id="mathModalContent">
-            <h3 style="margin:0;">Math Editor</h3>
-            <p style="margin:0; color:#666; font-size:0.9em;">Type your equation. Click the keyboard icon on the right if needed.</p>
-            
-            <math-field id="mf-input" virtual-keyboard-mode="manual"></math-field>
-            
-            <div style="display:flex; justify-content:flex-end; gap:10px;">
-                <button class="btn btn-danger" onclick="closeMathOverlay()">Cancel</button>
+    <div id="math-drawer">
+        <div class="drawer-actions">
+            <span class="drawer-info"><strong>Math Editor:</strong> Type here or use the virtual keyboard.</span>
+            <div>
+                <button class="btn btn-danger" onclick="closeMathDrawer()">Cancel</button>
                 <button class="btn btn-success" onclick="insertMath()">Insert Equation</button>
             </div>
         </div>
+        
+        <math-field id="mf-input" virtual-keyboard-mode="manual"></math-field>
     </div>
-
-
     <div class="header">
         <h2>Physics Question Editor</h2>
         <div class="controls">
@@ -121,7 +124,7 @@
                     <option value="cat_analyzing.js">Analyzing (Level 4)</option>
                     <option value="cat_evaluating.js">Evaluating (Level 5)</option>
                 </select>
-                <button class="btn btn-info" onclick="loadFromProject()">⬇ Load</button>
+                <button class="btn btn-info" onclick="loadFromProject()">⬇ Load File</button>
             </div>
             
             <div>
@@ -135,29 +138,32 @@
     <div id="editor-container"></div>
 
     <script>
+        // --- STATE ---
         let currentQuestions = [];
         let currentFileName = "cat_remembering.js";
-        
-        // --- MATH MODAL LOGIC ---
-        let activeInputId = null;
-        const overlay = document.getElementById('mathOverlay');
+        let activeInputId = null; // Which text box are we editing?
+
+        // --- MATH DRAWER LOGIC ---
+        const drawer = document.getElementById('math-drawer');
         const mf = document.getElementById('mf-input');
 
-        function openMathModal(targetId) {
+        function openMathDrawer(targetId) {
             activeInputId = targetId;
-            mf.setValue(''); // Clear previous
+            mf.setValue(''); // Clear previous math
             
-            // Show Overlay
-            overlay.style.display = 'flex';
-            
-            // Force focus so typing works immediately
+            // Show Drawer
+            drawer.classList.add('active');
+
+            // Force Focus immediately
             setTimeout(() => {
                 mf.focus();
+                // Optional: Scroll to bottom so drawer doesn't cover the input? 
+                // In this case, drawer is fixed, so we are fine.
             }, 100);
         }
 
-        function closeMathOverlay() {
-            overlay.style.display = 'none';
+        function closeMathDrawer() {
+            drawer.classList.remove('active');
             activeInputId = null;
         }
 
@@ -168,9 +174,9 @@
             const targetInput = document.getElementById(activeInputId);
 
             if (latex && targetInput) {
-                const insertText = `$${latex}$`;
+                const insertText = `$${latex}$`; // Wrap in LaTeX delimiters
 
-                // Insert at cursor position
+                // Standard cursor insertion logic
                 if (targetInput.selectionStart || targetInput.selectionStart == '0') {
                     const startPos = targetInput.selectionStart;
                     const endPos = targetInput.selectionEnd;
@@ -181,13 +187,15 @@
                     targetInput.value += insertText;
                 }
                 
-                // Trigger updates
+                // Trigger change event so the preview updates
                 targetInput.dispatchEvent(new Event('change'));
-                closeMathOverlay();
+                
+                closeMathDrawer();
             }
         }
 
-        // --- FILE OPERATIONS ---
+
+        // --- FILE LOADING ---
         async function loadFromProject() {
             const filename = document.getElementById('catSelector').value;
             currentFileName = filename;
@@ -196,43 +204,44 @@
 
             try {
                 const response = await fetch(`./questions/${filename}`); 
-                if (!response.ok) throw new Error("404 Not Found");
+                if (!response.ok) throw new Error("File not found.");
                 
                 const text = await response.text();
                 parseAndLoad(text);
                 status.textContent = `Loaded ${currentQuestions.length} items from ${filename}`;
             } catch (err) {
                 console.error(err);
-                alert("Could not load file. Ensure 'questions' folder is correct.");
+                alert("Error loading file. ensure local server is running.");
             }
         }
 
         function parseAndLoad(text) {
             try {
+                // Remove JS export wrappers to parse raw JSON
                 const jsonPart = text.replace(/export\s+const\s+data\s*=\s*/, '').replace(/;\s*$/, '');
                 const parseFunc = new Function("return " + jsonPart);
                 currentQuestions = parseFunc();
                 renderEditor();
             } catch(err) {
-                alert("Error parsing JS file.");
+                alert("Error parsing JS format.");
             }
         }
 
-        // --- RENDERER ---
+        // --- RENDER UI ---
         function renderEditor() {
             const container = document.getElementById('editor-container');
             container.innerHTML = "";
             
             if (!currentQuestions.length) {
-                container.innerHTML = "<div style='text-align:center; padding:20px;'>No questions loaded. Click 'Load'.</div>";
+                container.innerHTML = "<div style='text-align:center; padding:20px; color:#666;'>No questions loaded.</div>";
                 return;
             }
 
             currentQuestions.forEach((q, index) => {
-                // Generate Unique IDs
+                // Create unique IDs for every field
                 const qId = `q-${index}`;
                 const fbId = `fb-${index}`;
-                
+
                 let html = `
                     <div class="card">
                         <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
@@ -241,7 +250,7 @@
                         </div>
                         
                         <div class="form-group">
-                            <label>Question <button class="btn btn-math" onclick="openMathModal('${qId}')">∑ Math</button></label>
+                            <label>Question <button class="btn btn-math" onclick="openMathDrawer('${qId}')">∑ Math</button></label>
                             <textarea id="${qId}" onchange="updateField(${index}, 'question', this.value)">${q.question}</textarea>
                             <div class="preview-box" id="prev-q-${index}">${q.question}</div>
                         </div>
@@ -255,7 +264,7 @@
                             <div style="display:flex; align-items:center;">
                                 <input type="radio" name="rad-${index}" ${opt.correct ? 'checked' : ''} onchange="setCorrect(${index}, ${i})">
                                 <input type="text" id="${optId}" style="margin-left:5px;" value="${opt.text.replace(/"/g, '&quot;')}" onchange="updateOption(${index}, ${i}, this.value)">
-                                <button class="btn btn-math" onclick="openMathModal('${optId}')">∑</button>
+                                <button class="btn btn-math" onclick="openMathDrawer('${optId}')">∑</button>
                             </div>
                             <div class="preview-box" id="prev-opt-${index}-${i}" style="font-size:0.85em; margin-top:5px;">${opt.text}</div>
                         </div>
@@ -264,7 +273,7 @@
 
                 html += `</div>
                         <div class="form-group" style="margin-top:15px;">
-                            <label>Feedback <button class="btn btn-math" onclick="openMathModal('${fbId}')">∑ Math</button></label>
+                            <label>Feedback <button class="btn btn-math" onclick="openMathDrawer('${fbId}')">∑ Math</button></label>
                             <input type="text" id="${fbId}" value="${q.feedback ? q.feedback.replace(/"/g, '&quot;') : ''}" onchange="updateField(${index}, 'feedback', this.value)">
                             <div class="preview-box" id="prev-fb-${index}">${q.feedback || ''}</div>
                         </div>
@@ -273,12 +282,13 @@
                 container.innerHTML += html;
             });
 
+            // Refresh MathJax previews
             if(window.MathJax && window.MathJax.typesetPromise) {
                 MathJax.typesetPromise().catch(e => console.log(e));
             }
         }
 
-        // --- DATA UPDATES ---
+        // --- DATA HELPERS ---
         function updateField(idx, key, val) {
             currentQuestions[idx][key] = val;
             const prevId = (key === 'question') ? `prev-q-${idx}` : `prev-fb-${idx}`;
@@ -306,7 +316,7 @@
 
         function addNewQuestion() {
             currentQuestions.push({
-                level: 1, category: "New", question: "New Q",
+                level: 1, category: "New", question: "New Question",
                 options: [
                     {text:"A", correct:true}, {text:"B", correct:false},
                     {text:"C", correct:false}, {text:"D", correct:false}
@@ -318,7 +328,7 @@
         }
 
         function deleteQuestion(idx) {
-            if(confirm("Delete?")) {
+            if(confirm("Delete this question?")) {
                 currentQuestions.splice(idx, 1);
                 renderEditor();
             }
