@@ -3,91 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Physics Question Editor (Robust Math)</title>
+    <title>Physics Question Editor (Final Fix)</title>
     
     <script defer src="//unpkg.com/mathlive"></script>
     
     <script>
-    window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] } };
+        window.MathJax = { 
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+            startup: { typeset: false } // We will trigger manually
+        };
     </script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 
     <style>
+        /* --- GLOBAL STYLES --- */
         body { 
             font-family: 'Segoe UI', sans-serif; 
             background: #f0f2f5; 
             padding: 20px; 
             max-width: 1000px; 
             margin: 0 auto; 
-            padding-bottom: 100px;
+            padding-bottom: 120px; /* Space for footer/keyboard */
             
-            /* KEYBOARD FIX: Force MathLive keyboard to be the absolute top layer */
-            --keyboard-zindex: 99999 !important;
+            /* FORCE MATH KEYBOARD TO TOP */
+            --keyboard-zindex: 2147483647 !important; 
         }
-        
+
+        /* --- HEADER --- */
         .header { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; position: sticky; top: 0; z-index: 50; }
         .controls { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; }
         .load-section { display: flex; gap: 10px; align-items: center; background: #e9ecef; padding: 10px; border-radius: 6px; }
-        
+
+        /* --- BUTTONS --- */
         .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; }
         .btn-primary { background: #007bff; color: white; }
         .btn-success { background: #28a745; color: white; }
         .btn-danger { background: #dc3545; color: white; }
         .btn-info { background: #17a2b8; color: white; }
-        /* Math Button Styling */
-        .btn-math { background: #6610f2; color: white; padding: 4px 10px; font-size: 12px; margin-left: 5px; border-radius: 4px; border:none; cursor: pointer;}
-        .btn-math:hover { background: #520dc2; }
+        .btn-math { background: #6f42c1; color: white; padding: 4px 10px; font-size: 12px; margin-left: 5px; }
+        .btn-math:hover { background: #59359a; }
 
-        select { padding: 9px; border-radius: 4px; border: 1px solid #ccc; }
-        input[type="text"], textarea, input[type="number"] { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-        textarea { height: 70px; resize: vertical; font-family: 'Courier New', monospace; }
-        
+        /* --- FORMS --- */
         .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; border-left: 5px solid #007bff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
-        
-        .preview-box { background: #fffde7; padding: 10px; border: 1px solid #f0e68c; border-radius: 4px; margin-top: 5px; min-height: 24px; color: #333; }
-        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px; }
-        .option-item { background: #f8f9fa; padding: 10px; border-radius: 4px; display: flex; flex-direction: column; gap: 5px; }
-        .input-row { display: flex; align-items: center; width: 100%; }
+        input[type="text"], textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: 'Segoe UI', sans-serif; }
+        textarea { height: 60px; resize: vertical; }
 
-        /* --- MATH MODAL --- */
-        #math-modal {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;
+        /* --- PREVIEW BOX --- */
+        .preview-box { 
+            background: #fffde7; 
+            padding: 10px; 
+            border: 1px solid #f0e68c; 
+            border-radius: 4px; 
+            margin-top: 5px; 
+            min-height: 24px; 
+            color: #333;
+            font-size: 0.95em;
         }
-        .modal-content {
-            background: white; padding: 20px; width: 90%; max-width: 600px; border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3); display: flex; flex-direction: column; gap: 15px;
+
+        /* --- MATH MODAL (NATIVE DIALOG) --- */
+        dialog::backdrop {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(2px);
         }
+        dialog {
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            padding: 20px;
+            width: 90%;
+            max-width: 600px;
+            /* Ensure dialog is below the keyboard z-index */
+            z-index: 1000; 
+        }
+        
+        /* The Math Field inside the dialog */
         math-field {
-            font-size: 24px; border: 1px solid #ccc; padding: 10px; border-radius: 4px; width: 100%;
-            z-index: 2001;
+            width: 100%;
+            font-size: 24px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 15px 0;
+            background: #fff;
+            /* Important: Allow it to receive clicks */
+            pointer-events: auto;
         }
-        .modal-buttons { display: flex; justify-content: flex-end; gap: 10px; }
     </style>
 </head>
 <body>
 
-    <div id="math-modal">
-        <div class="modal-content">
-            <h3>Math Editor</h3>
-            <p style="margin:0; color:#666;">Type equation below. Click "Insert" to send to the text box.</p>
-            
-            <math-field id="math-input" virtual-keyboard-mode="manual"></math-field>
-            
-            <div class="modal-buttons">
-                <button class="btn btn-danger" onclick="closeMathModal()">Cancel</button>
-                <button class="btn btn-success" onclick="insertMath()">Insert Equation</button>
-            </div>
+    <dialog id="mathDialog">
+        <h3 style="margin-top:0">Math Editor</h3>
+        <p style="margin-bottom:0; color:#666; font-size:0.9em;">
+            Use the virtual keyboard or type LaTeX (e.g., \sqrt).
+        </p>
+        
+        <math-field id="mf-input" virtual-keyboard-mode="manual"></math-field>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+            <button class="btn btn-danger" onclick="closeMathDialog()">Cancel</button>
+            <button class="btn btn-success" onclick="insertMath()">Insert</button>
         </div>
-    </div>
+    </dialog>
+
 
     <div class="header">
         <h2>Physics Question Editor</h2>
         <div class="controls">
             <div class="load-section">
-                <select id="catSelector">
+                <select id="catSelector" style="padding: 8px;">
                     <option value="cat_remembering.js">Remembering (Level 1)</option>
                     <option value="cat_understanding.js">Understanding (Level 2)</option>
                     <option value="cat_applying.js">Applying (Level 3)</option>
@@ -102,7 +128,7 @@
                 <button class="btn btn-success" onclick="saveFile()">💾 Save JS</button>
             </div>
         </div>
-        <div id="status" style="margin-top:10px; color:gray; font-size:0.9em;">Ready. Select a file to load.</div>
+        <div id="status" style="margin-top:10px; color:gray; font-size:0.9em;">Ready.</div>
     </div>
 
     <div id="editor-container"></div>
@@ -111,39 +137,41 @@
         let currentQuestions = [];
         let currentFileName = "cat_remembering.js";
         
-        // --- ROBUST TARGETING SYSTEM ---
-        // We store the ID of the input box that requested the math editor
-        let activeInputId = null;
+        // --- MATH DIALOG LOGIC ---
+        let activeInputId = null; // Stores which text box called the editor
+        const dialog = document.getElementById('mathDialog');
+        const mf = document.getElementById('mf-input');
 
-        function openMathModal(targetElementId) {
-            // 1. Save exactly which input called us
-            activeInputId = targetElementId;
+        function openMathModal(targetId) {
+            activeInputId = targetId;
             
-            // 2. Open Modal
-            document.getElementById('math-modal').style.display = 'flex';
+            // 1. Reset Field
+            mf.setValue('');
             
-            // 3. Clear and Focus Math Field
-            const mf = document.getElementById('math-input');
-            mf.setValue(''); 
-            setTimeout(() => mf.focus(), 100);
+            // 2. Show Modal (using native showModal handles focus traps automatically)
+            dialog.showModal();
+
+            // 3. FORCE FOCUS (Crucial step for keyboard to work)
+            setTimeout(() => {
+                mf.focus(); 
+            }, 50);
         }
 
-        function closeMathModal() {
-            document.getElementById('math-modal').style.display = 'none';
+        function closeMathDialog() {
+            dialog.close();
             activeInputId = null;
         }
 
         function insertMath() {
-            if (!activeInputId) return; // Safety check
+            if (!activeInputId) return;
 
-            const mf = document.getElementById('math-input');
-            const latex = mf.getValue(); 
+            const latex = mf.getValue();
             const targetInput = document.getElementById(activeInputId);
 
             if (latex && targetInput) {
                 const insertText = `$${latex}$`;
-                
-                // Insert at cursor position (Standard Robust Method)
+
+                // Insert at cursor position
                 if (targetInput.selectionStart || targetInput.selectionStart == '0') {
                     const startPos = targetInput.selectionStart;
                     const endPos = targetInput.selectionEnd;
@@ -154,14 +182,13 @@
                     targetInput.value += insertText;
                 }
                 
-                // Trigger change to update data model
+                // Trigger updates
                 targetInput.dispatchEvent(new Event('change'));
-                
-                closeMathModal();
+                closeMathDialog();
             }
         }
 
-        // --- FILE LOADING ---
+        // --- FILE OPERATIONS ---
         async function loadFromProject() {
             const filename = document.getElementById('catSelector').value;
             currentFileName = filename;
@@ -169,17 +196,16 @@
             status.textContent = `Fetching questions/${filename}...`;
 
             try {
-                // Adjust this path if your folder structure is different!
-                // Currently looking for: ./questions/filename.js
+                // Ensure this path matches your folder structure!
                 const response = await fetch(`./questions/${filename}`); 
-                if (!response.ok) throw new Error("File not found (404).");
+                if (!response.ok) throw new Error("404 Not Found");
                 
                 const text = await response.text();
                 parseAndLoad(text);
-                status.textContent = `Loaded ${currentQuestions.length} questions from ${filename}`;
+                status.textContent = `Loaded ${currentQuestions.length} items from ${filename}`;
             } catch (err) {
                 console.error(err);
-                alert("Error loading file. Check console.");
+                alert("Could not load file. \n1. Check if 'questions' folder is in root.\n2. Check browser console.");
             }
         }
 
@@ -190,26 +216,26 @@
                 currentQuestions = parseFunc();
                 renderEditor();
             } catch(err) {
-                alert("Error parsing file format.");
+                alert("Error parsing JS file. Format might be wrong.");
             }
         }
 
-        // --- RENDERING ---
+        // --- RENDERER ---
         function renderEditor() {
             const container = document.getElementById('editor-container');
             container.innerHTML = "";
             
             if (!currentQuestions.length) {
-                container.innerHTML = "<p style='text-align:center;'>No questions.</p>";
+                container.innerHTML = "<div style='text-align:center; padding:20px;'>No questions loaded. Click 'Load' or 'Add'.</div>";
                 return;
             }
 
             currentQuestions.forEach((q, index) => {
-                // Generate Unique IDs for every field
-                const qTextId = `q-text-${index}`;
-                const fbTextId = `fb-text-${index}`;
-
-                const html = `
+                // Generate IDs
+                const qId = `q-${index}`;
+                const fbId = `fb-${index}`;
+                
+                let html = `
                     <div class="card">
                         <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
                             <strong>#${index + 1}</strong>
@@ -217,79 +243,76 @@
                         </div>
                         
                         <div class="form-group">
-                            <label>
-                                Question Text 
-                                <button class="btn btn-math" onclick="openMathModal('${qTextId}')">∑ Math</button>
-                            </label>
-                            <textarea id="${qTextId}" onchange="updateField(${index}, 'question', this.value)">${q.question}</textarea>
-                            <div class="preview-box" id="preview-q-${index}">Preview: ${q.question}</div>
+                            <label>Question <button class="btn btn-math" onclick="openMathModal('${qId}')">∑ Math</button></label>
+                            <textarea id="${qId}" onchange="updateField(${index}, 'question', this.value)">${q.question}</textarea>
+                            <div class="preview-box" id="prev-q-${index}">${q.question}</div>
                         </div>
 
-                        <div class="options-grid">
-                            ${q.options.map((opt, i) => {
-                                const optId = `opt-${index}-${i}`;
-                                return `
-                                <div class="option-item ${opt.correct ? 'correct-answer' : ''}">
-                                    <div class="input-row">
-                                        <input type="radio" name="ans_${index}" ${opt.correct ? 'checked' : ''} onchange="updateCorrect(${index}, ${i})">
-                                        <input type="text" id="${optId}" style="margin-left:8px;" value="${opt.text.replace(/"/g, '&quot;')}" onchange="updateOptionText(${index}, ${i}, this.value)">
-                                        <button class="btn btn-math" onclick="openMathModal('${optId}')">∑</button>
-                                    </div>
-                                    <div class="preview-box" id="preview-opt-${index}-${i}" style="font-size:0.9em; margin-top:2px;">${opt.text}</div>
-                                </div>
-                                `;
-                            }).join('')}
-                        </div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">`;
 
-                        <div class="form-group" style="margin-top: 15px;">
-                            <label>Feedback <button class="btn btn-math" onclick="openMathModal('${fbTextId}')">∑ Math</button></label>
-                            <input type="text" id="${fbTextId}" value="${q.feedback ? q.feedback.replace(/"/g, '&quot;') : ''}" onchange="updateField(${index}, 'feedback', this.value)">
-                            <div class="preview-box" id="preview-fb-${index}">${q.feedback || ''}</div>
+                q.options.forEach((opt, i) => {
+                    const optId = `opt-${index}-${i}`;
+                    html += `
+                        <div style="background:#f8f9fa; padding:10px; border-radius:4px; ${opt.correct ? 'border:2px solid #28a745' : ''}">
+                            <div style="display:flex; align-items:center;">
+                                <input type="radio" name="rad-${index}" ${opt.correct ? 'checked' : ''} onchange="setCorrect(${index}, ${i})">
+                                <input type="text" id="${optId}" style="margin-left:5px;" value="${opt.text.replace(/"/g, '&quot;')}" onchange="updateOption(${index}, ${i}, this.value)">
+                                <button class="btn btn-math" onclick="openMathModal('${optId}')">∑</button>
+                            </div>
+                            <div class="preview-box" id="prev-opt-${index}-${i}" style="font-size:0.85em; margin-top:5px;">${opt.text}</div>
+                        </div>
+                    `;
+                });
+
+                html += `</div>
+                        <div class="form-group" style="margin-top:15px;">
+                            <label>Feedback <button class="btn btn-math" onclick="openMathModal('${fbId}')">∑ Math</button></label>
+                            <input type="text" id="${fbId}" value="${q.feedback ? q.feedback.replace(/"/g, '&quot;') : ''}" onchange="updateField(${index}, 'feedback', this.value)">
+                            <div class="preview-box" id="prev-fb-${index}">${q.feedback || ''}</div>
                         </div>
                     </div>
                 `;
                 container.innerHTML += html;
             });
 
-            if(window.MathJax) MathJax.typesetPromise().catch(e=>{});
-        }
-
-        // --- UPDATES ---
-        function updateField(index, field, value) {
-            currentQuestions[index][field] = value;
-            let previewId = (field === 'question') ? `preview-q-${index}` : `preview-fb-${index}`;
-            const el = document.getElementById(previewId);
-            if(el) { el.innerText = value; MathJax.typesetPromise([el]); }
-        }
-
-        function updateOptionText(qIndex, optIndex, value) {
-            currentQuestions[qIndex].options[optIndex].text = value;
-            const el = document.getElementById(`preview-opt-${qIndex}-${optIndex}`);
-            el.innerText = value;
-            MathJax.typesetPromise([el]);
-        }
-
-        function updateCorrect(qIndex, optIndex) {
-            currentQuestions[qIndex].options.forEach(o => o.correct = false);
-            currentQuestions[qIndex].options[optIndex].correct = true;
-            renderEditor();
-        }
-
-        function deleteQuestion(index) {
-            if(confirm("Delete this question?")) {
-                currentQuestions.splice(index, 1);
-                renderEditor();
+            // Trigger MathJax
+            if(window.MathJax && window.MathJax.typesetPromise) {
+                MathJax.typesetPromise().catch(e => console.log(e));
             }
+        }
+
+        // --- DATA UPDATES ---
+        function updateField(idx, key, val) {
+            currentQuestions[idx][key] = val;
+            const prevId = (key === 'question') ? `prev-q-${idx}` : `prev-fb-${idx}`;
+            updatePreview(prevId, val);
+        }
+
+        function updateOption(qIdx, oIdx, val) {
+            currentQuestions[qIdx].options[oIdx].text = val;
+            updatePreview(`prev-opt-${qIdx}-${oIdx}`, val);
+        }
+
+        function updatePreview(elemId, content) {
+            const el = document.getElementById(elemId);
+            if(el) {
+                el.innerText = content;
+                if(window.MathJax) MathJax.typesetPromise([el]);
+            }
+        }
+
+        function setCorrect(qIdx, oIdx) {
+            currentQuestions[qIdx].options.forEach(o => o.correct = false);
+            currentQuestions[qIdx].options[oIdx].correct = true;
+            renderEditor();
         }
 
         function addNewQuestion() {
             currentQuestions.push({
-                level: 1,
-                category: "New",
-                question: "New Question",
+                level: 1, category: "New", question: "New Q",
                 options: [
-                    { text: "A", correct: true }, { text: "B", correct: false },
-                    { text: "C", correct: false }, { text: "D", correct: false }
+                    {text:"A", correct:true}, {text:"B", correct:false},
+                    {text:"C", correct:false}, {text:"D", correct:false}
                 ],
                 feedback: ""
             });
@@ -297,10 +320,17 @@
             window.scrollTo(0, document.body.scrollHeight);
         }
 
+        function deleteQuestion(idx) {
+            if(confirm("Delete?")) {
+                currentQuestions.splice(idx, 1);
+                renderEditor();
+            }
+        }
+
         function saveFile() {
             const jsonStr = JSON.stringify(currentQuestions, null, 4);
-            const fileContent = `export const data = ${jsonStr};`;
-            const blob = new Blob([fileContent], { type: "text/javascript" });
+            const content = `export const data = ${jsonStr};`;
+            const blob = new Blob([content], { type: "text/javascript" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
