@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Physics Question Editor (Robust Panel)</title>
+    <title>Physics Editor (Top Dock Fix)</title>
     
     <script defer src="//unpkg.com/mathlive"></script>
     
@@ -16,229 +16,222 @@
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 
     <style>
-        /* --- GLOBAL LAYOUT --- */
+        /* --- CORE LAYOUT --- */
         body { 
             font-family: 'Segoe UI', sans-serif; 
             background: #f4f6f8; 
             margin: 0; 
             padding: 20px; 
-            padding-bottom: 300px; /* Extra space for the bottom drawer */
+            padding-top: 240px; /* IMPORTANT: Push content down to make room for the Top Editor */
             max-width: 1000px; 
             margin-left: auto; 
             margin-right: auto;
+            
+            /* GLOBAL VARIABLE: Force MathLive Keyboard to be the absolute top layer */
+            --keyboard-zindex: 50000 !important;
         }
 
-        /* --- CONTROLS --- */
-        .header { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 50; }
-        .controls { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; }
-        .load-section { display: flex; gap: 10px; align-items: center; background: #e9ecef; padding: 10px; border-radius: 6px; }
+        /* --- THE TOP DOCK EDITOR (Solves Hidden Keyboard) --- */
+        #math-top-dock {
+            display: none; /* Hidden by default */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 200px; /* Fixed height at top */
+            background: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 10000; /* High, but lower than keyboard (50000) */
+            border-bottom: 5px solid #6610f2;
+            padding: 20px;
+            box-sizing: border-box;
+            flex-direction: column;
+            justify-content: center;
+        }
 
-        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        #math-top-dock.active {
+            display: flex;
+        }
+
+        .dock-content {
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* The Input Field in the Dock */
+        math-field {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 24px;
+            background: #fff;
+        }
+
+        /* --- CONTROLS & UI --- */
+        .header-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn-primary { background: #007bff; color: white; }
         .btn-success { background: #28a745; color: white; }
         .btn-danger { background: #dc3545; color: white; }
         .btn-info { background: #17a2b8; color: white; }
-        /* The Math Button */
+        
         .btn-math { 
             background: #6610f2; color: white; 
             padding: 2px 8px; font-size: 12px; margin-left: 5px; 
             border-radius: 4px; cursor: pointer; border: none;
         }
-        .btn-math:hover { background: #520dc2; }
 
-        /* --- EDITOR CARDS --- */
-        .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; border-left: 5px solid #007bff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-top: 20px;}
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
-        input[type="text"], textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: 'Segoe UI', sans-serif; }
+        /* --- QUESTIONS LIST --- */
+        .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; border-left: 5px solid #007bff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .preview-box { background: #fffde7; padding: 8px; border: 1px solid #f0e68c; border-radius: 4px; margin-top: 5px; min-height: 24px; font-size: 0.9em; }
+        
+        input[type="text"], textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         textarea { height: 60px; resize: vertical; }
-        .preview-box { background: #fffde7; padding: 8px; border: 1px solid #f0e68c; border-radius: 4px; margin-top: 5px; min-height: 24px; color: #333; font-size: 0.9em; }
 
-        /* --- THE FIXED MATH DRAWER (BOTTOM PANEL) --- */
-        #math-drawer {
-            display: none; /* Hidden by default */
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: #fff;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
-            z-index: 9000; /* High, but safe */
-            padding: 20px;
-            box-sizing: border-box;
-            border-top: 4px solid #6610f2;
-            flex-direction: column;
-            gap: 15px;
-        }
-        
-        #math-drawer.active {
-            display: flex;
-            animation: slideUp 0.3s ease-out;
-        }
-
-        @keyframes slideUp {
-            from { transform: translateY(100%); }
-            to { transform: translateY(0); }
-        }
-
-        /* The Math Field Configuration */
-        math-field {
-            width: 100%;
-            font-size: 24px;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            background: #fafafa;
-        }
-        
-        /* Drawer Actions */
-        .drawer-actions {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .drawer-info { color: #666; font-size: 0.9em; }
     </style>
 </head>
 <body>
 
-    <div id="math-drawer">
-        <div class="drawer-actions">
-            <span class="drawer-info"><strong>Math Editor:</strong> Type here or use the virtual keyboard.</span>
-            <div>
-                <button class="btn btn-danger" onclick="closeMathDrawer()">Cancel</button>
-                <button class="btn btn-success" onclick="insertMath()">Insert Equation</button>
-            </div>
-        </div>
-        
-        <math-field id="mf-input" virtual-keyboard-mode="manual"></math-field>
-    </div>
-    <div class="header">
-        <h2>Physics Question Editor</h2>
-        <div class="controls">
-            <div class="load-section">
-                <select id="catSelector" style="padding: 8px;">
-                    <option value="cat_remembering.js">Remembering (Level 1)</option>
-                    <option value="cat_understanding.js">Understanding (Level 2)</option>
-                    <option value="cat_applying.js">Applying (Level 3)</option>
-                    <option value="cat_analyzing.js">Analyzing (Level 4)</option>
-                    <option value="cat_evaluating.js">Evaluating (Level 5)</option>
-                </select>
-                <button class="btn btn-info" onclick="loadFromProject()">⬇ Load File</button>
+    <div id="math-top-dock">
+        <div class="dock-content">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong style="color:#6610f2;">Math Editor (Active)</strong>
+                <div style="font-size:0.8em; color:#666;">Keyboard will appear at bottom →</div>
             </div>
             
-            <div>
-                <button class="btn btn-primary" onclick="addNewQuestion()">+ Add Question</button>
-                <button class="btn btn-success" onclick="saveFile()">💾 Save JS</button>
+            <math-field id="mf-dock" virtual-keyboard-mode="manual"></math-field>
+            
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button class="btn btn-danger" onclick="closeDock()">Cancel</button>
+                <button class="btn btn-success" onclick="insertMath()">Insert to Box ⬇</button>
             </div>
         </div>
-        <div id="status" style="margin-top:10px; color:gray; font-size:0.9em;">Ready.</div>
     </div>
+
+
+    <div class="header-controls">
+        <div style="display:flex; gap:10px;">
+            <select id="catSelector" style="padding:8px;">
+                <option value="cat_remembering.js">Remembering</option>
+                <option value="cat_understanding.js">Understanding</option>
+                <option value="cat_applying.js">Applying</option>
+                <option value="cat_analyzing.js">Analyzing</option>
+                <option value="cat_evaluating.js">Evaluating</option>
+            </select>
+            <button class="btn btn-info" onclick="loadFromProject()">Load</button>
+        </div>
+        <div>
+            <button class="btn btn-primary" onclick="addNewQuestion()">+ Question</button>
+            <button class="btn btn-success" onclick="saveFile()">Save JS</button>
+        </div>
+    </div>
+    
+    <div id="status" style="margin-bottom:15px; color:gray;">Ready.</div>
 
     <div id="editor-container"></div>
 
+
     <script>
-        // --- STATE ---
         let currentQuestions = [];
         let currentFileName = "cat_remembering.js";
-        let activeInputId = null; // Which text box are we editing?
+        
+        // --- DOCK LOGIC ---
+        let activeTargetId = null;
+        const dock = document.getElementById('math-top-dock');
+        const mf = document.getElementById('mf-dock');
 
-        // --- MATH DRAWER LOGIC ---
-        const drawer = document.getElementById('math-drawer');
-        const mf = document.getElementById('mf-input');
+        // Setup Listener to ensure keyboard works
+        mf.addEventListener('focus', () => {
+            // Force keyboard visible when field is focused
+            window.mathVirtualKeyboard.show();
+        });
 
-        function openMathDrawer(targetId) {
-            activeInputId = targetId;
-            mf.setValue(''); // Clear previous math
+        function openMathDock(targetId) {
+            activeTargetId = targetId;
+            mf.setValue(''); 
             
-            // Show Drawer
-            drawer.classList.add('active');
-
-            // Force Focus immediately
+            // Show Dock
+            dock.classList.add('active');
+            
+            // Focus Logic
             setTimeout(() => {
                 mf.focus();
-                // Optional: Scroll to bottom so drawer doesn't cover the input? 
-                // In this case, drawer is fixed, so we are fine.
             }, 100);
         }
 
-        function closeMathDrawer() {
-            drawer.classList.remove('active');
-            activeInputId = null;
+        function closeDock() {
+            dock.classList.remove('active');
+            window.mathVirtualKeyboard.hide();
+            activeTargetId = null;
         }
 
         function insertMath() {
-            if (!activeInputId) return;
+            if (!activeTargetId) return;
 
             const latex = mf.getValue();
-            const targetInput = document.getElementById(activeInputId);
+            const targetInput = document.getElementById(activeTargetId);
 
             if (latex && targetInput) {
-                const insertText = `$${latex}$`; // Wrap in LaTeX delimiters
+                const insertText = `$${latex}$`;
 
-                // Standard cursor insertion logic
+                // Insert at cursor
                 if (targetInput.selectionStart || targetInput.selectionStart == '0') {
-                    const startPos = targetInput.selectionStart;
-                    const endPos = targetInput.selectionEnd;
-                    targetInput.value = targetInput.value.substring(0, startPos)
-                        + insertText
-                        + targetInput.value.substring(endPos, targetInput.value.length);
+                    const start = targetInput.selectionStart;
+                    const end = targetInput.selectionEnd;
+                    targetInput.value = targetInput.value.substring(0, start) 
+                        + insertText 
+                        + targetInput.value.substring(end);
                 } else {
                     targetInput.value += insertText;
                 }
                 
-                // Trigger change event so the preview updates
+                // Update
                 targetInput.dispatchEvent(new Event('change'));
-                
-                closeMathDrawer();
+                closeDock();
             }
         }
-
 
         // --- FILE LOADING ---
         async function loadFromProject() {
             const filename = document.getElementById('catSelector').value;
             currentFileName = filename;
-            const status = document.getElementById('status');
-            status.textContent = `Fetching questions/${filename}...`;
+            document.getElementById('status').textContent = "Loading...";
 
             try {
-                const response = await fetch(`./questions/${filename}`); 
-                if (!response.ok) throw new Error("File not found.");
-                
+                const response = await fetch(`./questions/${filename}`);
+                if (!response.ok) throw new Error("File missing");
                 const text = await response.text();
-                parseAndLoad(text);
-                status.textContent = `Loaded ${currentQuestions.length} items from ${filename}`;
-            } catch (err) {
-                console.error(err);
-                alert("Error loading file. ensure local server is running.");
-            }
-        }
-
-        function parseAndLoad(text) {
-            try {
-                // Remove JS export wrappers to parse raw JSON
+                
+                // Parse JS export
                 const jsonPart = text.replace(/export\s+const\s+data\s*=\s*/, '').replace(/;\s*$/, '');
                 const parseFunc = new Function("return " + jsonPart);
                 currentQuestions = parseFunc();
+                
                 renderEditor();
-            } catch(err) {
-                alert("Error parsing JS format.");
+                document.getElementById('status').textContent = `Loaded ${currentQuestions.length} questions.`;
+            } catch (err) {
+                console.error(err);
+                alert("Error loading file. Check console.");
             }
         }
 
-        // --- RENDER UI ---
+        // --- RENDERER ---
         function renderEditor() {
             const container = document.getElementById('editor-container');
             container.innerHTML = "";
-            
-            if (!currentQuestions.length) {
-                container.innerHTML = "<div style='text-align:center; padding:20px; color:#666;'>No questions loaded.</div>";
-                return;
-            }
 
             currentQuestions.forEach((q, index) => {
-                // Create unique IDs for every field
                 const qId = `q-${index}`;
                 const fbId = `fb-${index}`;
 
@@ -246,53 +239,49 @@
                     <div class="card">
                         <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
                             <strong>#${index + 1}</strong>
-                            <button class="btn btn-danger" style="padding:4px 8px; font-size:12px;" onclick="deleteQuestion(${index})">Delete</button>
+                            <button class="btn btn-danger" style="font-size:12px; padding:4px;" onclick="deleteQ(${index})">Delete</button>
                         </div>
                         
-                        <div class="form-group">
-                            <label>Question <button class="btn btn-math" onclick="openMathDrawer('${qId}')">∑ Math</button></label>
-                            <textarea id="${qId}" onchange="updateField(${index}, 'question', this.value)">${q.question}</textarea>
+                        <div style="margin-bottom:15px;">
+                            <label>Question <button class="btn btn-math" onclick="openMathDock('${qId}')">∑ Math</button></label>
+                            <textarea id="${qId}" onchange="updateData(${index}, 'question', this.value)">${q.question}</textarea>
                             <div class="preview-box" id="prev-q-${index}">${q.question}</div>
                         </div>
 
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">`;
-
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">`;
+                        
                 q.options.forEach((opt, i) => {
                     const optId = `opt-${index}-${i}`;
                     html += `
-                        <div style="background:#f8f9fa; padding:10px; border-radius:4px; ${opt.correct ? 'border:2px solid #28a745' : ''}">
-                            <div style="display:flex; align-items:center;">
-                                <input type="radio" name="rad-${index}" ${opt.correct ? 'checked' : ''} onchange="setCorrect(${index}, ${i})">
+                        <div style="background:#f8f9fa; padding:10px; border-radius:4px; ${opt.correct?'border:2px solid green':''}">
+                            <div style="display:flex;">
+                                <input type="radio" name="r-${index}" ${opt.correct?'checked':''} onchange="setCorrect(${index}, ${i})">
                                 <input type="text" id="${optId}" style="margin-left:5px;" value="${opt.text.replace(/"/g, '&quot;')}" onchange="updateOption(${index}, ${i}, this.value)">
-                                <button class="btn btn-math" onclick="openMathDrawer('${optId}')">∑</button>
+                                <button class="btn btn-math" onclick="openMathDock('${optId}')">∑</button>
                             </div>
-                            <div class="preview-box" id="prev-opt-${index}-${i}" style="font-size:0.85em; margin-top:5px;">${opt.text}</div>
-                        </div>
-                    `;
+                            <div class="preview-box" id="prev-opt-${index}-${i}">${opt.text}</div>
+                        </div>`;
                 });
 
                 html += `</div>
-                        <div class="form-group" style="margin-top:15px;">
-                            <label>Feedback <button class="btn btn-math" onclick="openMathDrawer('${fbId}')">∑ Math</button></label>
-                            <input type="text" id="${fbId}" value="${q.feedback ? q.feedback.replace(/"/g, '&quot;') : ''}" onchange="updateField(${index}, 'feedback', this.value)">
-                            <div class="preview-box" id="prev-fb-${index}">${q.feedback || ''}</div>
+                        <div style="margin-top:15px;">
+                            <label>Feedback <button class="btn btn-math" onclick="openMathDock('${fbId}')">∑ Math</button></label>
+                            <input type="text" id="${fbId}" value="${q.feedback||''}" onchange="updateData(${index}, 'feedback', this.value)">
+                            <div class="preview-box" id="prev-fb-${index}">${q.feedback||''}</div>
                         </div>
-                    </div>
-                `;
+                    </div>`;
+                
                 container.innerHTML += html;
             });
 
-            // Refresh MathJax previews
-            if(window.MathJax && window.MathJax.typesetPromise) {
-                MathJax.typesetPromise().catch(e => console.log(e));
-            }
+            if(window.MathJax) MathJax.typesetPromise().catch(e=>{});
         }
 
-        // --- DATA HELPERS ---
-        function updateField(idx, key, val) {
+        // --- UPDATES ---
+        function updateData(idx, key, val) {
             currentQuestions[idx][key] = val;
-            const prevId = (key === 'question') ? `prev-q-${idx}` : `prev-fb-${idx}`;
-            updatePreview(prevId, val);
+            const pid = key==='question' ? `prev-q-${idx}` : `prev-fb-${idx}`;
+            updatePreview(pid, val);
         }
 
         function updateOption(qIdx, oIdx, val) {
@@ -300,12 +289,9 @@
             updatePreview(`prev-opt-${qIdx}-${oIdx}`, val);
         }
 
-        function updatePreview(elemId, content) {
-            const el = document.getElementById(elemId);
-            if(el) {
-                el.innerText = content;
-                if(window.MathJax) MathJax.typesetPromise([el]);
-            }
+        function updatePreview(id, text) {
+            const el = document.getElementById(id);
+            if(el) { el.innerText = text; MathJax.typesetPromise([el]); }
         }
 
         function setCorrect(qIdx, oIdx) {
@@ -317,18 +303,15 @@
         function addNewQuestion() {
             currentQuestions.push({
                 level: 1, category: "New", question: "New Question",
-                options: [
-                    {text:"A", correct:true}, {text:"B", correct:false},
-                    {text:"C", correct:false}, {text:"D", correct:false}
-                ],
+                options: [{text:"A",correct:true}, {text:"B",correct:false}, {text:"C",correct:false}, {text:"D",correct:false}],
                 feedback: ""
             });
             renderEditor();
             window.scrollTo(0, document.body.scrollHeight);
         }
 
-        function deleteQuestion(idx) {
-            if(confirm("Delete this question?")) {
+        function deleteQ(idx) {
+            if(confirm("Delete?")) {
                 currentQuestions.splice(idx, 1);
                 renderEditor();
             }
@@ -338,12 +321,10 @@
             const jsonStr = JSON.stringify(currentQuestions, null, 4);
             const content = `export const data = ${jsonStr};`;
             const blob = new Blob([content], { type: "text/javascript" });
-            const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url;
+            a.href = URL.createObjectURL(blob);
             a.download = currentFileName;
             a.click();
-            URL.revokeObjectURL(url);
         }
     </script>
 </body>
